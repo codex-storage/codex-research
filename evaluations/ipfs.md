@@ -37,5 +37,5 @@ Dagger. It is not meant to be a criticism of IPFS.
 - IPFS uses variable size blocks instead of fixed-size chunks (§3.6)
 - Supporting version control directly in IPFS feels like an unnecessary
   complication (§3.6.5)
-- Handles mutable state by hacking it into the routing DHT, instead of using a
-  separate mutable naming system like ENS
+- Handles mutable state by hacking it into the routing DHT (§3.7.1), instead of
+  using a separate mutable naming system like ENS
