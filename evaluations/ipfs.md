@@ -32,9 +32,6 @@ Dagger. It is not meant to be a criticism of IPFS.
   barter with (§3.4)
 - Object pinning (§3.5.3) inevitably leads to centralized gateways to IPFS, such
   as Infura and Pinata
-- There are no self-describing multiformats for encryption and signing (§3.5.5),
-  although [multicodec](https://github.com/multiformats/multicodec/) can
-  probably be used here.
 - IPFS uses variable size blocks instead of fixed-size chunks (§3.6), which
   might make it a bit harder to add incentives and pricing
 - Supporting version control directly in IPFS feels like an unnecessary
