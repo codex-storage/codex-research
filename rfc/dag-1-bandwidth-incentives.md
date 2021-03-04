@@ -279,6 +279,20 @@ Alice want to pay `x` to Bob, then they update the state as follows:
 Notice that this requires only an exchange of signed updates between Alice and
 Bob. Signatures from and communication with the intermediary are not necessary.
 
+### Cashless entry
+
+Dagger allows for cashless entry; participation in the network without a need to
+lock up funds upfront. This works as follows:
+
+  1. A new peer -Carol- opens up a ledger channel with an intermediary, with an
+     allocation of 0 funds to Carol. Because Carol initially has no funds in the
+     channel, the intermediary does not require a deposit from Carol in the
+     `AssetHolder` contract.
+  2. Carol can now start to offer services in the Dagger network, for instance
+     to Dave. Carol, Dave and the intermediary can open a virtual channel, which
+     allows Dave to pay Carol for services rendered. When the virtual channel is
+     closed, the earned funds are moved to Carols ledger channel.
+
 Open Questions
 --------------
 
@@ -295,3 +309,9 @@ Open Questions
   4. The blockchain should be monitored for any challenges regarding state
      channels. How to incorporate a monitoring protocol into Dagger is an open
      question, to be answered in a future RFC.
+  5. The impact on privacy of using micropayments for bandwidth needs to be
+     addressed. Who can learn what you're storing and downloading on the network
+     through payment channels?
+  6. Pricing of bandwidth is as of yet unspecified . Does every byte downloaded
+     from the network have the same price regardless of the peer it's being
+     downloaded from? Do we have free downloads?
