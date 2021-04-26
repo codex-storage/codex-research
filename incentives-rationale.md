@@ -1,7 +1,6 @@
 # Incentives Rationale
 
 Why incentives? In order to have a sustainable p2p storage network such that it can be used to store arbitrary data and avoid specializing around a certain type of content, economic incentives or payments are required.
-
 ## Incentives in p2p networks
 
 Bittorrent & friends, tend to specialize around **popular content** such as movies or music (citation). Empirical evidence suggests, that this is a consequence of how incentives are aligned in this types of network (citation). Without diving too deep, the bittorrent incentives model is composed of 3 major elements:
@@ -18,7 +17,7 @@ In other words, you trade "content" in a "tit-for-tat" fashion, which increases 
 - File availability becomes dependent on the content's popularity and age (in the network). It's availability declines over time.
   - Anecdotally, the current season of a tv show is often easier to come by than the previous season, this is because once the content has been downloaded (and consumed), there is little reason to continue sharing it for a longer period of time.
 
-There is also operational costs associated with running a node. This costs grows (at the very least linearly) proportionally to the amount of users being served. Running a highly available node that serves thousands of other nodes a day is probably unfeasible for the vast majority of casual users and building a business around this type of protocols has unclear economics and quite often,legal consequences due to (the already mentioned network specialization issues) sharing illegal or "pirated" content.
+There is also operational costs associated with running a node. This costs grows (at the very least linearly) proportional to the amount of users being served. Running a highly available node that serves thousands of other nodes a day is probably unfeasible for the vast majority of casual users and building a business around this type of protocols has unclear economics and quite often, legal consequences due to (the already mentioned network specialization issues) sharing illegal or "pirated" content.
 
 In short, a direct consequence of this incentives model is **network specialization** and **content/data availability**.
 
@@ -74,7 +73,7 @@ The fundamental issues that storage incentives solve is **data availability** an
 
 Enabling persistence opens up many common use cases such as data backups, becoming a storage provider for traditional web and web3 applications, and many others. In short, it replaces centralized cloud storage providers. Due to the wide range of use cases the issue of specialization also goes away.
 
-It's worth noting that we make no claims that the network is not going to being used to store and distribute "pirated" content, we merely claim that by realigning incentives we'll enable other more common use cases.
+It's worth noting that we make no claims that the network is not going to be used to store and distribute "pirated" content, we merely claim that by realigning incentives we'll enable other more common use cases.
 
 Together, these incentives lead to a sustainable and censorship resistant p2p network. You negotiate a price for certain content to be stored long-term. Should the content become unavailable (due to censorship or a generic failure) after the contract is negotiated then the peer that stores the content is punished. When content is popular, then it will spread because more peers want to earn bandwidth fees, which allows the network to scale to high demand, acting as a censorship resistant CDN.
 
