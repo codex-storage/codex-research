@@ -1,6 +1,6 @@
 # Robust Proofs of Data Possession and Retrievability
 
-> Proofs of data possession (PoDP) schemes establish if an entity is currently or has been in possession of a data set. Proofs of Retrievability (PoR) schemes attempt to detect and prevent a provider from covertly restricting access to a dataset.
+> Proofs of data possession (PoDP) schemes establish if an entity is currently or has been in possession of a data set. Proofs of Retrievability (PoR) schemes attempt to detect with negligible probability that an entity is maliciously or otherwise withholding data.
 
 ## Proofs of data possession
 
