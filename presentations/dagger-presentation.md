@@ -53,6 +53,7 @@ Note:
 How do we achieve reliability?  
 Proof of data possession over time  
 Proof of retrievability (interactive)
+Prevents data withholding (ransomware), we do not have legal recourse like cloud services
 
 ---
 
@@ -96,19 +97,24 @@ bandwidth
 ![Costs of resources](images/cost-of-resources.svg) <!-- .element: width="60%"-->
 
 Note:
+Free market to handle resource allocation  
+Incentives have multiple purposes  
 Incentives compensate for resources  
 Incentives provide security; it makes economic sense to stick to the rules  
 Storage incentives provide storage reliability  
 Bandwidth incentives provide retrievability (dynamic CDN)  
+Bandwidth incentives prevent denial of service, spamming  
 Incentives encourage participation in the network  
 
 ---
 
-## Money / Investments
+## global cloud storage market
+
+`$` 61 billion in 2020  
+`$` 390 billion in 2028
 
 Note:
-how much of the market can we cover  
-how much would it cost to make
+source: https://www.fortunebusinessinsights.com/cloud-storage-market-102773/s
 
 ---
 
