@@ -42,6 +42,38 @@ Storage is always accessible to you.
 
 ---
 
+## Tweak the protocol?
+
+Note:
+
+Why is reliability missing in existing networks?  
+Is there something we can tweak in the protocol?  
+Bittorrent and IPFS became specialized networks around popular data.  
+Blockchains require block data to run the blockchain.  
+For generic storage, we can't tweak the storage protocol, we need incentives.  
+
+---
+
+## Incentives
+
+storage
+
+bandwidth
+
+![Costs of resources](images/cost-of-resources.svg) <!-- .element: width="60%"-->
+
+Note:
+Free market to handle resource allocation  
+Incentives have multiple purposes  
+Incentives compensate for resources  
+Incentives provide security; it makes economic sense to stick to the rules  
+Storage incentives provide storage reliability  
+Bandwidth incentives provide retrievability (dynamic CDN)  
+Bandwidth incentives prevent denial of service, spamming  
+Incentives encourage participation in the network  
+
+---
+
 ## Proofs
 
 data possession
@@ -85,26 +117,6 @@ proof of retrievability
 Note:
 Prevents data withholding (ransomware)  
 The prover does not know when it's being verified
-
----
-
-## Incentives
-
-storage
-
-bandwidth
-
-![Costs of resources](images/cost-of-resources.svg) <!-- .element: width="60%"-->
-
-Note:
-Free market to handle resource allocation  
-Incentives have multiple purposes  
-Incentives compensate for resources  
-Incentives provide security; it makes economic sense to stick to the rules  
-Storage incentives provide storage reliability  
-Bandwidth incentives provide retrievability (dynamic CDN)  
-Bandwidth incentives prevent denial of service, spamming  
-Incentives encourage participation in the network  
 
 ---
 
