@@ -96,7 +96,7 @@ ensure that fees are paid there.
 
 We improve on the BRICK protocol by allowing signatures from all participants
 and committee members to be combined into a single signature using Schnorr or
-BLS signatures.
+[BLS signatures][4].
 
 We improve on the BRICK protocol by requiring less interaction with the
 blockchain when closing unilaterally. In particular, we do not require each
@@ -120,3 +120,4 @@ It also lacks a proof-of-concept implementation and performance measurements.
 [1]: https://www.cs.cornell.edu/~iddo/pisa.pdf
 [2]: https://arxiv.org/pdf/1905.11360.pdf
 [3]: https://arxiv.org/pdf/1909.10926.pdf
+[4]: https://crypto.stanford.edu/~dabo/pubs/papers/BLSmultisig.html
