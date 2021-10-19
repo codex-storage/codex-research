@@ -115,7 +115,7 @@ Any regular node that participates in the network needs to have an operational a
 
 ### Subsidies or airdrops
 
-Any application migrating or being built for a deserialized platform requires some operational capital to participate. Many projects workaround this by initially subsidizing potential users with small portions of their token. This are usually known as airdrops. Dagger can use a similar technique to allow first adopters to begin participating in the network.
+Any application migrating or being built for a distributed platform requires some operational capital to participate. Many projects workaround this by initially subsidizing potential users with small portions of their token. This are usually known as airdrops. Dagger can use a similar technique to allow first adopters to begin participating in the network.
 
 ### Tit-for-tat settlements
 
