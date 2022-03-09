@@ -102,7 +102,9 @@ periods of time, we derive it from the current block number:
 
     pointer(period) = (blocknumber + period) % 256
 
-Over time, when more blocks are produced, we get this picture:
+Each time a new block is produced the block pointer increases by one, which
+ensures that it keeps pointing to the same block. Over time, when more blocks
+are produced, we get this picture:
 
      |
      |      - - - |-----------------------------------|
@@ -120,19 +122,51 @@ Over time, when more blocks are produced, we get this picture:
      |                                |
      v                             pointer
 
-Pointer duos
-------------
+Avoiding surprises
+------------------
 
 There is one problem left when we use the pointer as we've just described.
 Because of the modulus, there are periods in which the pointer wraps around. It
-moves from 255 to 0 from one block to the next. This is undesirable because this
-would mean that the proof requirements for a period can change between the
-moment a proof is due and the moment a validator checks it. To counter this, we
-introduce pointer duos:
+moves from 255 to 0 from one block to the next. This is undesirable because it
+would mean that new proof requirements could all of a sudden appear, leaving too
+little time for the host to calculate and submit a proof.
+
+We identified two ways of dealing with this problem: pointer downtime and
+pointer duos. Pointer downtime appears to be the simplest solution, so we
+present it here. Pointer duos are described in the appendix.
+
+Pointer downtime
+----------------
+
+We ignore any proof requirements when the pointer is pointing to one of the most
+recent blocks:
+
+     - - - |-------------------------|/////////|
+          255                            ^     0
+                                         |
+                                       pointer
+
+When the pointer is in the grey zone, no proof is required. The amount of blocks
+in the grey zone should be chosen such that it is not possible to generate them
+all inside a period; this ensures that a host cannot be surprised by new proof
+requirements popping up.
+
+If we want a host to provide a proof on average once every N periods, it now no
+longer suffices to have a 1 in N chance to provide a proof. Because there are no
+proof requirements in the grey zone, the odds have changed in favor of the host.
+To compensate, the odds outside of the grey zone should be increased. For
+instance, if the grey zone is 64 blocks (¼ of the available blocks), then the
+odds of requiring a proof should be 1 in ¾N.
+
+--------------------------------------------------------------------------------
+
+Appendix: Pointer duos
+----------------------
+
+An alternative solution to the pointer wrapping problem is pointer duos:
 
     pointer1(period) = (blocknumber + period) % 256
     pointer2(period) = (blocknumber + period + 128) % 256
-
 
 The pointers are 128 blocks apart, ensuring that when one pointer wraps, the
 other remains stable.
@@ -145,10 +179,7 @@ other remains stable.
 We allow hosts to choose which of the two pointers to use. This has implications
 for the die roll that we perform to determine whether a proof is required.
 
-Odds with two pointers
-----------------------
-
-If we want a host to provide a proof on average once every N blocks, it no
+If we want a host to provide a proof on average once every N periods, it no
 longer suffices to have a 1 in N chance to provide a proof. Should a host be
 completely free to choose between the two pointers (which is not entirely true,
 as we shall see shortly) then the odds of a single pointer should be 1 in √N to
@@ -161,12 +192,6 @@ longer be relied upon. A really conservative host would follow the strategy of
 always choosing the pointer that points to the most recent block, requiring the
 odds to be 1 in N. A host that tries to optimize towards providing as little
 proofs as necessary will require the odds to be nearer to 1 in √N.
-
-Future work can determine optimal strategies for hosts to follow for each of the
-networks (L1 or L2) that this design is deployed to, and the accompanying odds
-that are required. For now, we leave the odds of the die roll to be negotiable
-per storage contract so that the market can adapt to changing host strategies on
-the network.
 
 [1]: https://docs.soliditylang.org/en/v0.8.12/units-and-global-variables.html#block-and-transaction-properties
 [2]: https://community.optimism.io/docs/developers/build/differences/#block-numbers-and-timestamps
