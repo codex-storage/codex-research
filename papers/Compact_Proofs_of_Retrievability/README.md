@@ -29,7 +29,7 @@ The paper introduces two types of schemes - public and private. In the private s
 
 ### Observations
 
-- Both the data and the tags are employed in the generation and verification of the proof, which guarantees that the original data was used in the generation of the proof. This solves the pre-image attack that other schemes are susceptible to.
+- Both the original data and the tags are employed in the generation and verification of the proof, which prevents pre-image attack that other schemes are susceptible to.
 - It potentially achieves a level of compression where at most one block worth of data and one cryptographic tag is ever needed to be sent across the network.
 - The erasure coding solves several concurrent issues. With an MDS erasure code and a coding ratio of 1 (K=M)
   - It is only necessary to prove that %50 of all the blocks are in place, this lowers the amount of data needed to be sampled making it constant for datasets of any size
