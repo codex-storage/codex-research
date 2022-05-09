@@ -15,7 +15,7 @@ The paper introduces a remote storage auditing scheme known as Proofs of Retriev
 
 It takes the idea of homomorphic authenticators from Ateniese and the idea of using erasure coding from Juels and Kaliski to strengthen the remote auditing scheme. To our knowledge, this is also the first work to provide rigorous mathematical proofs for this type of remote auditing.
 
-The paper introduces two types of schemes - public and private. In the private setting, the scheme requires possession of a private key to perform verification, but lowers both the storage and network overhead. In the public setting, only the public key is required for verification, but the storage and network overhead are greater than those of the private one.
+The paper introduces two types of schemes - public and private. In the private setting, the scheme requires possession of a private key to perform verification but lowers both the storage and network overhead. In the public setting, only the public key is required for verification but the storage and network overhead are greater than those of the private one.
 
 ### Main ideas
 
