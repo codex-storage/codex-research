@@ -1,4 +1,4 @@
-Dagger Research
+Codex Research
 ===============
 
-Contains research for the Dagger peer-to-peer storage network.
+Contains research for the Codex peer-to-peer storage network.
