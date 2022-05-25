@@ -21,7 +21,7 @@ The paper is a study of a BitTorrent community called DIME, where users share li
  * Many users have a ratio above 1 (which shows an altruistic behaviour)
  * New files are more attractive to users and have high demand at the beginning
  * Users with high bandwidth Internet connections take advantage of new files to take credits
- * Old files are not good the gain credit because they are not in high demand
+ * Old files are no good to gain credit because they are not in high demand
  * There are periods where downloads are free
  * Users prefer to download old files during free periods
 
