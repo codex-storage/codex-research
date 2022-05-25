@@ -5,6 +5,7 @@
 ## Index
 
 - [Compact Proofs of Retrievability](./Compact_Proofs_of_Retrievability/README.md)
+- [Filecoin A Decentralized Storage Network](./Filecoin_A_Decentralized_Storage_Network/README.md)
 
 ## Writing Summaries
 
