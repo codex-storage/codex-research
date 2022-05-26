@@ -18,7 +18,7 @@ The paper presents the different trade-offs for implementing erasure code recons
 
 * Every reconstruction implies data traffic over the network
 * If we reconstruct after every single block loss (eager repair), we consume too much bandwidth
-* If we wait for several blocks to be lost (Lazy repair), we can reconstruct the missing block just one time and safe bandwidth
+* If we wait for several blocks to be lost (Lazy repair), we can reconstruct the missing block just one time and save bandwidth
 * If we wait too long before reconstruction, data might be lost if multiple erasures occur simultaneously
 * A model can help us understand the impact of the parameters s, r and r0 on bandwidth and loss rate
 * The distribution of blocks redundancy is a bit counter-intuitive
