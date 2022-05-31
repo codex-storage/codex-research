@@ -70,7 +70,7 @@ However, the code is $K$ rows strong only if we operate under the assumption tha
 
 There is an issue resulting mostly from the systematic nature of the code and the presence of original and parity data.
 
-It is safe to assume that the systematic (original) data is going to be retrieved more frequently than the parity data, which should only be retrieved when one of the systematic pieces has gone missing thus, in order to prevent congestion and overloading of the systematic nodes some further placement considerations should be taken in to account. Namely, having nodes dedicated to parity data should be avoided.
+It is safe to assume that the systematic (original) data is going to be retrieved more frequently than the parity data, which should only be retrieved when some of the systematic pieces have gone missing thus, in order to prevent congestion and overloading of the systematic nodes some further placement considerations should be taken in to account. Namely, having nodes dedicated to parity data should be avoided.
 
 This can be accomplished by choosing a placement pattern that avoids favoring some nodes over others when it comes to storing the systematic data, and at the same time it should not break the placement rules around the safety of the code. For example, one can think of a placement strategy where the node gets assigned a block based on the node's position in some queue or its id or a combination thereof.
 
