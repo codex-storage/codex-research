@@ -44,7 +44,7 @@ _The sequence of original blocks_
 
 ![](./figs/blocks.svg)
 
-_The logical matrix resulting from stacking each $S$ symbols together, where K=3 and S=4_
+_The logical matrix resulting from stacking each $S$ symbols together, where $K=3$ and $S=4$_
 
 ![](./figs/matrix1.svg)
 
@@ -52,7 +52,7 @@ _Symbols and Coding direction. Each cell corresponds to a  symbol $s$ and each c
 
 ![](./figs/matrix3.svg)
 
-_The resulting matrix with parity blocks added, where K=3, M=2, N=5 and S=4_
+_The resulting matrix with parity blocks added, where $K=3$, $M=2$, $N=5$ and $S=4$_
 
 ![](./figs/matrix2.svg)
 
