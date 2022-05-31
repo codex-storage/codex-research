@@ -64,9 +64,20 @@ Moreover, the resulting dataset is still systematic, which means that the origin
 
 The code introduced in the above section satisfies our original requirement of any $K$ blocks allowing to reconstruct the original dataset. In fact, one can easily see that every row in the resulting matrix is a standalone element and any $K$ rows will allow reconstructing the original dataset.
 
-However, the code is $K$ elements strong only if we operate under the assumption that each failure is independent of each other. Thus, it is a requirement that each row is placed independently. Moreover, the overall strength of the code decreases based on the number of dependent failures. If we place $N$ rows on two independent locations, we can only tolerate $M=N/2$ failures, three will allow tolerating $M=N/3$ failures and so on. Hence, the code is only as strong as the number of independent locations each element is stored on. Thus, each row and better yet, each element (block) of the matrix should be stored independently and in a pattern mitigating dependence, meaning that placing elements of the same column together should be avoided.
+However, the code is $K$ rows strong only if we operate under the assumption that each failure is independent of each other. Thus, it is a requirement that each row is placed independently. Moreover, the overall strength of the code decreases based on the number of dependent failures. If we place $N$ rows on two independent locations, we can only tolerate $M=N/2$ failures, three will allow tolerating $M=N/3$ failures and so on. Hence, the code is only as strong as the number of independent locations each element is stored on. Thus, each row and better yet, each element (block) of the matrix should be stored independently and in a pattern mitigating dependence, meaning that placing elements of the same column together should be avoided.
+
+### Load balancing retrieval
+
+There is an issue resulting mostly from the systematic nature of the code and the presence of original and parity data.
+
+It is safe to assume that the systematic (original) data is going to be retrieved more frequently than the parity data, which should only be retrieved when one of the systematic pieces have gone missing thus, in order to prevent congestion and overloading of the systematic nodes some further placement considerations should be taken in to account. Namely, having nodes dedicated to parity data should be avoided.
+
+This can be accomplished by choosing a placement pattern that avoids favoring some nodes over others when it comes to storing the systematic data, and at the same time it should not break the placement rules around the safety of the code. For example, one can think of a placement strategy where the node gets assigned a block based on the node's position in some queue or its id or a combination thereof.
+
+Some placing strategies will be explored in a further document.
 
 ### Adversarial vs random erasures
 
-If the above placement rules are respect, there is still a problem that needs to be addressed - random erasures. Both the code and the placement rules protect against random erasures, meaning erasures that aren't targeted or coordinated in any way, it doesn't protect against adversarial erasures - targeted or coordinated erasures.
+There is still a problem that needs to be addressed - adversarial erasures. Both the code and the placement rules protect against random erasures, meaning erasures that aren't targeted or coordinated in any way, it doesn't protect against adversarial erasures.
 
+In codex, adversarial erasures are partly addressed by the presence of incentives and penalties. Here we make all the standard assumptions around rational behavior, and rely on remote auditing to detect faults, penalize nodes and rebuilt the lost data when faults are detected.
