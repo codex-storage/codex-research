@@ -40,19 +40,19 @@ The algorithm looks like the following:
 
 Bellow is a graphical outline of the process:
 
-_The sequence of original blocks_
+The sequence of original blocks
 
 ![](./figs/blocks.svg)
 
-_The logical matrix resulting from stacking each $S$ symbols together, where $K=3$ and $S=4$_
+The logical matrix resulting from stacking each $S$ symbols together, where $K=3$ and $S=4$
 
 ![](./figs/matrix1.svg)
 
-_Symbols and Coding direction. Each cell corresponds to a  symbol $s$ and each column of symbols are coded together_
+Each cell corresponds to a  symbol $s$ and each column of symbols are coded together
 
 ![](./figs/matrix3.svg)
 
-_The resulting matrix with parity blocks added, where $K=3$, $M=2$, $N=5$ and $S=4$_
+The resulting matrix with parity blocks added, where $K=3$, $M=2$, $N=5$ and $S=4$
 
 ![](./figs/matrix2.svg)
 
