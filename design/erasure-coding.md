@@ -1,4 +1,4 @@
-# Codex Erasure Coding
+# Erasure Coding
 
 We present an interleaved erasure code that is able to encode arbitrary amounts of data despite the relatively small Reed-Solomon codeword size.
 
@@ -13,7 +13,7 @@ We employ an Reed-Solomon code with configurable $K$ and $M$ parameters per data
 ### Terminology
 
 - A $codeword$ ($C$) is the maximum amount of data that can be encoded together, it cannot surpass the size of the GF field. For example $C <= GF(2^8) = C <= 256$.
-- A $symbol$ ($s$) is an element of the of the GF field. A $codeword$ is composed of a number of symbols up to the size of the GF field. For example a field of $GF(2^8) = 256$ contains up to 256 symbols. The size of the symbol in bytes is also limited by the size of the GF field, a symbol in $GF(2^8)$ will have a max size of 8 bits or 1 byte.
+- A $symbol$ ($s$) is an element of the GF field. A $codeword$ is composed of a number of symbols up to the size of the GF field. For example a field of $GF(2^8) = 256$ contains up to 256 symbols. The size of the symbol in bytes is also limited by the size of the GF field, a symbol in $GF(2^8)$ will have a max size of 8 bits or 1 byte.
 
 The size of the codeword determines the maximum number of symbols that an error correcting code can encode and decode as a unit. For example, a Reed-Solomon code that uses a Galois field of $2^8$ can only encode and decode 256 symbols together. In other words, the size of the field imposes a natural limit on the size of the data that can be coded together.
 
@@ -21,7 +21,7 @@ Why not use a larger field? The limitations are mostly practical, either memory 
 
 ## Interleaving
 
-Interleaving is the process of combining or interweaving several symbols from disparate parts of the source data in ways that minimizes the likelihood that any sequence of these symbols is damaged together compromises the rest of the data.
+Interleaving is the process of combining or interweaving several symbols from disparate parts of the source data in ways that minimizes the likelihood that any sequence of these symbols damaged together compromises the rest of the data.
 
 In our case, the primary requirement is to ensure that we're preserving the dataset in its entirety and any $K$ elements are still enough to recover the original dataset. This is important to emphasize, we cannot simply encode a chunk of data individually, that would only protect that individual chunk, the code should protect the dataset in its entirety, even if it is terabytes size.
 
@@ -35,25 +35,38 @@ Codex employs a type of interleaving where every $K$ symbols spaced at $S$ inter
 The algorithm looks like the following:
 
 1) Given a dataset chunked in equally sized blocks and rounded up to the next multiple of $K$, where $K$ represents the number of symbols to be coded together and $M$ the resulting parity symbols.
-2) Take $K$, $S$ spaced blocks and $K$ symbols $s$ from each of the selected blocks at offset 0 and encode into $M$ parity symbols each placed in new $S$ spaced blocks at the same offset. Repeat this steps at offset $1*sizeof(GF(p))$ and so on.
+2) Take $K$, $S$ spaced blocks and $K$ symbols $s$ from each of the selected blocks at offset 0 and encode into $M$ parity symbols, each placed in new $S$ spaced blocks at the same offset and appended to the end of the sequence of original blocks. Repeat this steps at offset $1*sizeof(GF(p))$ and so on.
 3) Repeat the above steps for the length of the entire dataset.
 
-_Original Dataset Blocks_
+Bellow is a graphical outline of the process:
+
+_The sequence of original blocks_
 
 ![](./figs/blocks.svg)
 
-_Matrix form K=3, S=4_
+_The logical matrix resulting from stacking each $S$ symbols together, where K=3 and S=4_
 
 ![](./figs/matrix1.svg)
 
-_Matrix form with parity blocks added K=3, M=2, N=5_
-
-![](./figs/matrix2.svg)
-
-_Symbol coding direction_
+_Symbols and Coding direction. Each cell corresponds to a  symbol $s$ and each column of symbols are coded together_
 
 ![](./figs/matrix3.svg)
 
-The resulting structure is a matrix of height $N$ and width $S$, which allows loosing any $M$ "rows" of the matrix and still reconstruct the original dataset. Of course, loosing more than $M$ symbols in a given column would still render the entire dataset invalid, but the likelihood of that happening is mitigated by placing the individual original and parity blocks on independent locations.
+_The resulting matrix with parity blocks added, where K=3, M=2, N=5 and S=4_
+
+![](./figs/matrix2.svg)
+
+The resulting structure is a matrix of height $N$ and width $S$. It allows loosing any $M$ "rows" of the matrix and still reconstructing the original dataset. Of course, loosing more than $M$ symbols in a given column would still render the entire dataset invalid, but the likelihood of that happening is mitigated by placing the individual original and parity blocks on independent locations.
 
 Moreover, the resulting dataset is still systematic, which means that the original blocks are unchanged and can be used without prior decoding.
+
+## Data placement and erasures
+
+The code introduced in the above section satisfies our original requirement of any $K$ blocks allowing to reconstruct the original dataset. In fact, one can easily see that every row in the resulting matrix is a standalone element and any $K$ rows will allow reconstructing the original dataset.
+
+However, the code is $K$ elements strong only if we operate under the assumption that each failure is independent of each other. Thus, it is a requirement that each row is placed independently. Moreover, the overall strength of the code decreases based on the number of dependent failures. If we place $N$ rows on two independent locations, we can only tolerate $M=N/2$ failures, three will allow tolerating $M=N/3$ failures and so on. Hence, the code is only as strong as the number of independent locations each element is stored on. Thus, each row and better yet, each element (block) of the matrix should be stored independently and in a pattern mitigating dependence, meaning that placing elements of the same column together should be avoided.
+
+### Adversarial vs random erasures
+
+If the above placement rules are respect, there is still a problem that needs to be addressed - random erasures. Both the code and the placement rules protect against random erasures, meaning erasures that aren't targeted or coordinated in any way, it doesn't protect against adversarial erasures - targeted or coordinated erasures.
+
