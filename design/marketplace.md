@@ -62,6 +62,7 @@ including a small amount of host losses that can be tolerated.
       proof probability               # frequency at which proofs are required
       proof parameters                # proof of retrievability parameters
       erasure coding                  # erasure coding parameters
+      dispersal                       # dispersal parameter
 
       hosts                           # amount of storage hosts (including loss)
       loss                            # number of allowed host losses
@@ -184,6 +185,42 @@ of the contract, it allows people to easily chip in to host content, etc.) it
 has one big disadvantage: hosts no longer know for how long they'll be kept to
 the contract. When a contract is continuously topped up, they cannot leave the
 contract without losing their collateral.
+
+Dispersal
+---------
+
+For a client it is beneficial when their content is stored on as many different
+hosts as possible, to guard against host failures. Should a single host fill all
+slots in the contract, then the failure of this single host could mean that the
+content is lost. On a network level, we also want to avoid that a few large
+players are able to fill most contract slots, which would mean that the network
+becomes fairly centralized. Therefore each contract includes a dispersal
+parameter that helps spread content over many hosts and avoid centralization in
+the network.
+
+The dispersal parameter allows a client to choose the amount of spreading within
+the network. When a slot becomes empty then only a small amount of hosts in the
+network are allowed to fill the slot. Over time, more and more hosts will be
+allowed to fill a slot. Each slot starts with a different set of allowed hosts.
+
+The speed at which new hosts are included is chosen by the client. When the
+client choses a high speed, then very quickly every host in the network will be
+able to fill slots. This increases the chances of a single host to fill all
+slots in a contract. When the client choses a low speed, then it is more likely
+that different hosts fill the slots.
+
+We use the Kademlia distance function to indicate which hosts are allowed to
+fill a slot.
+
+    distance between a and b:   xor(a, b)
+    slot start point:           hash(nonce || slot number)
+    allowed distance:           elapsed time * dispersal parameter
+
+A host is allowed to fill a slot when the distance between its id and the start
+point is less that the allowed distance.
+
+Note that even though we use the Kademlia distance function, this bears no
+relation to the DHT. We use the blockchain address of the host, not its peer id.
 
 Conclusion
 ----------
