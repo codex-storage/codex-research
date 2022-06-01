@@ -98,21 +98,11 @@ The time interval that a slot is filled by a host determines the host payout;
 for every second of the interval a certain amount of tokens are awarded to the
 host. Hosts that fill a slot are required to submit frequent proofs of storage.
 
-When a proof is missed, the collateral associated with a slot is mostly burned,
-except for a fee for the one who marked the proof as missing. The slot is now
-considered empty again until another host submits a correct proof together with
-collateral.
-
-To incentivize repair, we allow the host that takes over a slot to count the
-interval between the missed proof and the new proof towards its own profits.
-This means that when a proof is missed, the incentive to repair increases over
-time.
-
-The situation where the payout on repair becomes larger than the required
-collateral is an interesting one. On the one hand, this could be an opportunity
-for zero-cash entry into the network. On the other hand, it might lead to
-undesired behavior because the loss of collateral is no longer that important
-for a node. This is probably worth looking further into.
+When a proof is missed, the collateral associated with a slot is used to pay a
+fee to the one who marked the proof as missing. The rest of the slot collateral
+is reserved for repairs. The slot is now considered empty again until another
+host submits a correct proof together with collateral. Payouts for the time
+interval that a slot is empty are burned.
 
 Contract lifecycle
 ------------------
@@ -164,6 +154,22 @@ The client is able to retrieve any funds that are left in the contract.
     | ended |
     ---------
 
+
+Repairs
+-------
+
+When a slot becomes empty, the remaining collateral associated with the slot is
+used as an incentive to repair the lost content. Repair typically involves
+downloading other parts of the content and using erasure coding to restore the
+missing parts. This incurs costs for a host. To compensate the host for these
+costs it receives not only its own collateral back at the end of the contract,
+but also the remaining collateral from the host that failed to hold a slot.
+
+We expect the collateral to be significantly higher than the costs of repair.
+This means that hosts in the network can benefit greatly from repairs, and they
+may prioritize repairs over filling slots in new contracts. This is intentional,
+we want the network to prioritize honoring existing contracts over starting new
+ones.
 
 Renewal
 -------
