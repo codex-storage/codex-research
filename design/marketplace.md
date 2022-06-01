@@ -216,8 +216,25 @@ fill a slot.
     slot start point:           hash(nonce || slot number)
     allowed distance:           elapsed time * dispersal parameter
 
+
+Each slot has a different start point:
+
+      slot 4   slot 0             slot 2              slot 3        slot 1
+        |        |                  |                   |             |
+        v        v                  v                   v             v
+    ----·--------·------------------·-------------------·-------------·----
+
 A host is allowed to fill a slot when the distance between its id and the start
 point is less that the allowed distance.
+
+                                 start point
+                                      |
+                t=3    t=2    t=1     v
+    -------------(------(------(------·------)------)------)--------------
+                          ^                            ^
+                          |                            |
+                     this host is                 this host is
+                    allowed at t=2               allowed at t=3
 
 Note that even though we use the Kademlia distance function, this bears no
 relation to the DHT. We use the blockchain address of the host, not its peer id.
