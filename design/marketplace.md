@@ -247,9 +247,9 @@ A host is allowed to fill a slot when the distance between its id and the start
 point is less that the allowed distance.
 
                                  start point
-                                      |
+                                      |           Kademlia distance
                 t=3    t=2    t=1     v
-    -------------(------(------(------·------)------)------)--------------
+          <------(------(------(------·------)------)------)------>
                           ^                            ^
                           |                            |
                      this host is                 this host is
