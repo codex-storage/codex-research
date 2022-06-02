@@ -78,8 +78,8 @@ Initially all host slots are empty. An empty slot can be filled by anyone by
 submitting a correct storage proof together with collateral.
 
 
-        collateral                              collateral
-          proof    proof          missed          proof                missed
+        proof &                                 proof &
+      collateral   proof          missed      collateral               missed
             |        |              |               |                    |
             v        v              v               v                    v
             -------------------------------------------------------------------
@@ -88,7 +88,7 @@ submitting a correct storage proof together with collateral.
                                     |                                    |
                                     v                                    v
                                 collateral                           collateral
-                                  burned                               burned
+                                  lost                                 lost
 
 
 
