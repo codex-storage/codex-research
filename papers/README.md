@@ -5,6 +5,9 @@
 ## Index
 
 - [Compact Proofs of Retrievability](./Compact_Proofs_of_Retrievability/README.md)
+- [Filecoin A Decentralized Storage Network](./Filecoin_A_Decentralized_Storage_Network/README.md)
+- [Economics of BitTorrent communities](./Economics_of_BitTorrent_communities/README.md)
+- [Peer-to-Peer Storage Systems: a Practical Guideline to be Lazy](./Peer-to-Peer_Storage_System_a_Practical_Guideline_to_be_lazy/README.md)
 
 ## Writing Summaries
 
