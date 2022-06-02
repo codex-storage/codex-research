@@ -194,19 +194,33 @@ contract without losing their collateral.
 Dispersal
 ---------
 
+Here we propose an an alternative way to select hosts for slots that is a
+variant of the "first come, first serve" approach that we described earlier. It
+intends to alleviate these problems:
+
+  1. a single host can fill all slots in a contract
+  2. a small group of powerful hosts is able to fill most slots in the network
+  3. resources are wasted when many hosts try to fill the same slot
+
 For a client it is beneficial when their content is stored on as many different
 hosts as possible, to guard against host failures. Should a single host fill all
 slots in the contract, then the failure of this single host could mean that the
-content is lost. On a network level, we also want to avoid that a few large
-players are able to fill most contract slots, which would mean that the network
-becomes fairly centralized. Therefore each contract includes a dispersal
-parameter that helps spread content over many hosts and avoid centralization in
-the network.
+content is lost.
 
-The dispersal parameter allows a client to choose the amount of spreading within
-the network. When a slot becomes empty then only a small amount of hosts in the
-network are allowed to fill the slot. Over time, more and more hosts will be
-allowed to fill a slot. Each slot starts with a different set of allowed hosts.
+On a network level, we also want to avoid that a few large players are able to
+fill most contract slots, which would mean that the network becomes fairly
+centralized.
+
+When too many nodes compete for a slot in a contract, and only one is selected,
+then this leads to wasted resources in the network. Wasted resources ultimately
+lead to a higher cost of storage.
+
+To alleviate these problems, we introduce a dispersal parameter in the storage
+contract. The dispersal parameter allows a client to choose the amount of
+spreading within the network. When a slot becomes empty then only a small amount
+of hosts in the network are allowed to fill the slot. Over time, more and more
+hosts will be allowed to fill a slot. Each slot starts with a different set of
+allowed hosts.
 
 The speed at which new hosts are included is chosen by the client. When the
 client choses a high speed, then very quickly every host in the network will be
@@ -243,6 +257,10 @@ point is less that the allowed distance.
 
 Note that even though we use the Kademlia distance function, this bears no
 relation to the DHT. We use the blockchain address of the host, not its peer id.
+
+This dispersal mechanism still requires modeling to check that it meets its
+goals, and to find the optimal value for the dispersal parameter, given certain
+network conditions. It is also worth looking into simpler alternatives.
 
 Conclusion
 ----------
