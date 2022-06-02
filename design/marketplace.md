@@ -99,11 +99,16 @@ The time interval that a slot is filled by a host determines the host payout;
 for every second of the interval a certain amount of tokens are awarded to the
 host. Hosts that fill a slot are required to submit frequent proofs of storage.
 
-When a proof is missed, the collateral associated with a slot is used to pay a
-fee to the one who marked the proof as missing. The rest of the slot collateral
-is reserved for repairs. The slot is now considered empty again until another
-host submits a correct proof together with collateral. Payouts for the time
-interval that a slot is empty are burned.
+When a certain number of proofs is missed, the slot is considered empty again.
+The collateral associated with the slot is used to pay a fee to the node that
+indicated that proofs were missing. The rest of the slot collateral is reserved
+for repairs. An empty slot can be filled again once another host submits a
+correct proof together with collateral. Payouts for the time interval that a
+slot is empty are burned.
+
+Payouts for all hosts are accumulated in the contract and payed out at contract
+end. This is to ensure that the incentive posed by the collateral is not
+diminished over time.
 
 Contract lifecycle
 ------------------
@@ -258,10 +263,6 @@ awarded slots in the contract. This removes the explicit contract start (and its
 associated timeout behavior) that was required in the old design. It also adds
 an incentive to quickly start storing the content while slots are available in
 the contract.
-
-Instead of receiving a payout at the end of a contract in the old design, now
-hosts earn money while the contract is running. This could be used to pay for
-running costs on longer contracts.
 
 While the old design required separate negotiations per host, this design
 ensures that either the single contract starts with all hosts, or is cancelled.
