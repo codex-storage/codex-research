@@ -1,4 +1,16 @@
 # Falcon Codes
+## Authors
+
+  - Ari Juels
+  - James Kelley
+  - Roberto Tamassia
+  - Nikos Triandopoulos
+
+## DOI
+
+https://doi.org/10.1145/2810103.2813728.
+
+## Bibliography entry
 
 Juels, Ari, James Kelley, Roberto Tamassia, and Nikos Triandopoulos. ‘Falcon Codes: Fast, Authenticated LT Codes (Or: Making Rapid Tornadoes Unstoppable)’. In Proceedings of the 22nd ACM SIGSAC Conference on Computer and Communications Security, 1032–47. CCS ’15. New York, NY, USA: Association for Computing Machinery, 2015. https://doi.org/10.1145/2810103.2813728.
 
