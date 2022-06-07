@@ -63,6 +63,7 @@ including a small amount of host losses that can be tolerated.
       proof parameters                # proof of retrievability parameters
       erasure coding                  # erasure coding parameters
       dispersal                       # dispersal parameter
+      repair reward                   # amount of tokens paid for repairs
 
       hosts                           # amount of storage hosts (including loss)
       loss                            # number of allowed host losses
@@ -100,11 +101,11 @@ for every second of the interval a certain amount of tokens are awarded to the
 host. Hosts that fill a slot are required to submit frequent proofs of storage.
 
 When a certain number of proofs is missed, the slot is considered empty again.
-The collateral associated with the slot is used to pay a fee to the node that
-indicated that proofs were missing. The rest of the slot collateral is reserved
-for repairs. An empty slot can be filled again once another host submits a
-correct proof together with collateral. Payouts for the time interval that a
-slot is empty are burned.
+The collateral associated with the slot is mostly burned. Some of it is used to
+pay a fee to the node that indicated that proofs were missing, and some of it is
+reserved for repairs. An empty slot can be filled again once another host
+submits a correct proof together with collateral. Payouts for the time interval
+that a slot is empty are burned.
 
 Payouts for all hosts are accumulated in the contract and payed out at contract
 end. This is to ensure that the incentive posed by the collateral is not
@@ -164,18 +165,18 @@ The client is able to retrieve any funds that are left in the contract.
 Repairs
 -------
 
-When a slot becomes empty, the remaining collateral associated with the slot is
-used as an incentive to repair the lost content. Repair typically involves
-downloading other parts of the content and using erasure coding to restore the
-missing parts. This incurs costs for a host. To compensate the host for these
-costs it receives not only its own collateral back at the end of the contract,
-but also the remaining collateral from the host that failed to hold a slot.
+When a slot becomes empty, some of the remaining collateral associated with the
+slot is used as an incentive to repair the lost content. Repair typically
+involves downloading other parts of the content and using erasure coding to
+restore the missing parts. This incurs costs for a host. To compensate the host
+for these costs it receives not only its own collateral back at the end of the
+contract, but also a reward. The size of the reward is a parameter of the
+contract.
 
-We expect the collateral to be significantly higher than the costs of repair.
-This means that hosts in the network can benefit greatly from repairs, and they
-may prioritize repairs over filling slots in new contracts. This is intentional,
-we want the network to prioritize honoring existing contracts over starting new
-ones.
+The size of the reward should be chosen carefully. It should not be too low, to
+incentivize hosts in the network to prioritize repairs over filling new slots in
+the network. It should also not be too high, to prevent malicious nodes in the
+network to try to disable hosts in an attempt to collect the reward.
 
 Renewal
 -------
