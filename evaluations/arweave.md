@@ -1,3 +1,6 @@
+---
+published: false
+---
 An evaluation of the Arweave paper
 ==================================
 
