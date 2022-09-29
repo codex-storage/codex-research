@@ -14,4 +14,5 @@ Draft agenda, feel free add / modify as you see fit.
   - Perhaps we can use Hester's designs as a guide?
 - Project management
   - Tasks/issues cleanup
-  - Discuss what's working, what's not, and what we can improve 
+  - Discuss what's working, what's not, and what we can improve
+- Present high-level architecture, make recording of it for future reference
