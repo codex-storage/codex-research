@@ -12,3 +12,6 @@ Draft agenda, feel free add / modify as you see fit.
 - Node interactions: how do we envision executing transactions in different states?
   - dapp / http server embedded in the binary?
   - Perhaps we can use Hester's designs as a guide?
+- Project management
+  - Tasks/issues cleanup
+  - Discuss what's working, what's not, and what we can improve 
