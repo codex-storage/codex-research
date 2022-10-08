@@ -16,3 +16,6 @@ Draft agenda, feel free add / modify as you see fit.
   - Tasks/issues cleanup
   - Discuss what's working, what's not, and what we can improve
 - Present high-level architecture, make recording of it for future reference
+- Codex use cases
+- Codex credits
+- Codex differentiators
