@@ -174,7 +174,7 @@ host's collateral. The size of the reward is a fraction of slot's collateral
 where the fraction is parameter of the smart contract.
 
 The size of the reward should be chosen carefully. It should not be too low, to
-incentive hosts in the network to prioritize repairs over filling new slots in
+incentivize hosts in the network to prioritize repairs over filling new slots in
 the network. It should also not be too high, to prevent malicious nodes in the
 network to try to disable hosts in an attempt to collect the reward.
 
