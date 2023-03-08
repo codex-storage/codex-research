@@ -169,17 +169,7 @@ When a slot is freed because of missing too many storage proofs, some
 collateral from the host that previously filled the slot is used as an incentive
 to repair the lost content. Repair typically involves downloading other parts of 
 the content and using erasure coding to restore the missing parts. To incentive
-other nodes to do this repair, there are two rewards.
-
-First reward is increased reward compared to other hosts hosting the content. 
-The previous host already hosted the content for some time, but in the end failed
-and dropped out.
-The new host that fills in the slot needs to store the content for shorter time 
-to get the final reward and hence gets higher price of slot per time ratio. 
-This reward though is rather non-deterministic as we can not say beforehand
-when the original host will drop out.
-
-Hence, second reward is repair-fee which is a partial amount of the original 
+other nodes to do this repair, there is repair fee. It is a partial amount of the original
 host's collateral. The size of the reward is a fraction of slot's collateral
 where the fraction is parameter of the smart contract.
 
