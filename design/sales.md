@@ -4,8 +4,7 @@ Sales module
 The sales module is responsible for selling a node's available storage in the
 [marketplace](./marketplace.md). In order to do so it needs to know how much
 storage is available. It also needs to be able to reserve parts of the storage,
-to make sure that it is not used for other purposes while we are filling a slot
-in a storage request, or while we're attempting to fill a slot.
+to make sure that it is not used for other purposes.
 
     ---------------------------------------------------
     |                                                 |
@@ -20,65 +19,115 @@ in a storage request, or while we're attempting to fill a slot.
     |                           ^         ^           |
     ----------------------------|---------|-----------
                                 |         |
-                  availability  |         | state
+                 reserved space |         | state
                                 v         v
                    ----------------    -----------------
                    |     Repo     |    |   Datastore   |
                    ----------------    -----------------
 
-The Sales module keeps track of storage reservations in its internal
-Reservations module. It keeps a record of which pieces of reserved storage
-belong to which storage request slot. It queries and updates the amount of
-available storage in the Repo. It uses a Datastore to persist its own state.
+The reservations module keeps track of storage that is available to be sold.
+Users are able to add availability to indicate how much storage they are willing
+to sell and under which conditions.
 
-The Repo exposes the following functions that allow the Reservations module to
-query and update the amount of available storage:
+    Availability
+      amount
+      maximum duration
+      minimum price
 
-    Repository API:
-      function available(): amount
-      function reserve(amount)
-      function release(amount)
+Availabilities consist of an amount of storage, the maximum duration and minimum
+price to sell it for. They represent storage that is for sale, but not yet sold.
+This is information local to the node that can be altered without affecting
+global state.
 
-The Datastore is a generic key-value store that is used to persist the state of
-the Reservations module, so that it survives node restarts.
+Adding availability
+-------------------
 
-    Datastore API:
-      function put(key, value)
-      function get(key): value
+When a user adds availability, then the reservations module wil check whether
+there is enough space available in the Repo. If there is enough space, then it
+will increase the amount of reserved space in the Repo. It persists the state of
+all availabilities to the Datastore, to ensure that they can be restored when a
+node is restarted.
 
-Reserving storage space
------------------------
+    User          Reservations          Repo      Datastore
+     |                  |                  |            |
+     | add availability |                  |            |
+     | ---------------->| check free space |            |
+     |                  |----------------->|            |
+     |                  | reserve amount   |            |
+     |                  |----------------->|            |
+     |                  |                               |
+     |                  | persist availability          |
+     |                  |------------------------------>|
+
+Selling storage
+---------------
 
 When a request for storage is submitted on chain, the sales module decides
-whether or not it wants to act on it. If the requested duration and size match
-what the node wants to sell and the reward is sufficient, then the sales module
-will go through several steps to try and fill a slot in the request.
+whether or not it wants to act on it. First, it tries to find an availability
+that matches the requested amount, duration, and price. The matching
+availability will be removed from the reservations module, so that it can't be
+sold twice. If an availability matches, but is larger than the requested
+storage, then the Sales module may decide to split the availability into a part
+that we can use for the request, and a remainder that can be sold separately.
 
-First, it will select a slot from the request to fill. Then, it will reserve
-space in the Repo to ensure that it keeps enough space available to store the
-content. It will mark the reserved space as belonging to the slot. Next, it will
-download the content, calculate a storage proof, and submit the proof on chain.
-If any of these later steps fail, then the node should release the storage that
-it reserved earlier.
+It then selects a slot from the request to fill, and starts downloading its
+content chunk by chunk. For each chunk that is successfully downloaded, a bit of
+reserved space in the Repo is released. The content is stored in the Repo with a
+time-to-live value that ensures that the content remains in the Repo until the
+request expires.
 
-When a slot was filled successfully, then its storage should not be released
-until the request ends.
+Once the entire content is downloaded, the sales module will calculate a storage
+proof, and submit the proof on chain. If these steps are all successful, then
+this node has filled the slot. Once the other slots are filled by other nodes
+the request will start. The time-to-live value of the content should then be
+updated to match the duration of the storage request.
 
-Releasing storage space
------------------------
+    Marketplace          Sales              Reservations      Repo
+      |                    |                     |              |
+      | incoming request   |                     |              |
+      |------------------->| find reservation    |              |
+      |                    |-------------------->|              |
+      |                    | remove reservation  |              |
+      |                    |-------------------->|              |
+      |                    |                     |              |
+      |                    | store content                      |
+      |                    |----------------------------------->|
+      |                    | set time-to-live                   |
+      |                    |----------------------------------->|
+      |                    | release reserved space             |
+      |                    |----------------------------------->|
+      |       submit proof |                                    |
+      |<-------------------|                                    |
+      |                    |                                    |
+      .                    .                                    .
+      .                    .                                    .
+      | request started    |                                    |
+      |------------------->| update time-to-live                |
+      |                    |----------------------------------->|
 
-When a storage request ends, or an attempt to fill a slot fails, it is important
-to release the reserved space that belonged to the slot. To ensure that the
-right amount of space is released, and that it is only released once, we keep
-track of how much space is reserved in the Repo for a slot.
+Ending a request
+----------------
 
-Releasing storage space goes in three steps. First, we look up the amount of
-space that is reserved for the slot in the Datastore. Then we release that
-amount in the Repo, and remove the entry for the slot from the Datastore.
+When a storage request comes to an end, then the content can be removed from the
+repo and the storage space can be made available for sale again. The same should
+happen when something went wrong in the process of selling storage.
 
-The first step ensures that we release the correct amount of space from the
-Repo. The last step ensures that we do not release space from the Repo more than
-once.
+The time-to-live value should be removed from the content in the Repo, reserved
+space in the Repo should be increased again, and the availability that was used
+for the request can be re-added to the reservations module.
+
+                         Sales              Reservations      Repo
+                           |                     |              |
+                           |                     |              |
+                           |                                    |
+                           | remove time to live                |
+                           |----------------------------------->|
+                           | increase reserved space            |
+                           |----------------------------------->|
+                           |                                    |
+                           | re-add availability |              |
+                           |-------------------->|              |
+                           |                     |              |
 
 Persisting state
 ----------------
@@ -88,6 +137,28 @@ this includes the slots that a host is filling and the state of each slot. This
 ensures that a node's local view of slot states does not deviate from the
 network view, even when the network changes while the node is down. The rest of
 the state is kept on local disk by the Repo and the Datastore. How much space is
-reserved by the sales module, and how much remains available to sell is
-persisted on disk by the Repo. A mapping between amounts of reserved space and
-slots is persisted on disk by the Datastore.
+reserved to be sold is persisted on disk by the Repo. The availabilities are
+persisted on disk by the Datastore.
+
+Repo
+----
+
+The Repo exposes the following functions that allow the reservations module to
+query the amount of available storage, to update the amount of reserved
+space, and to store data for a guaranteed amount of time.
+
+    Repository API:
+      function available(): amount
+      function reserve(amount)
+      function release(amount)
+      function setTtl(cid, ttl)
+
+Datastore
+---------
+
+The Datastore is a generic key-value store that is used to persist the state of
+the Reservations module, so that it survives node restarts.
+
+    Datastore API:
+      function put(key, value)
+      function get(key): value
