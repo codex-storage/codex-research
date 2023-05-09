@@ -23,8 +23,8 @@ A new design
 We propose to create new type of storage contract, containing a number of slots.
 Each of these slots represents an agreement with a storage host to store a part
 of the content. When a client wants store data on the network with durability
-guarantees, it posts a storage Request on the blockchain. Hosts that want to
-offer storage can fill a slot in the Request.
+guarantees, it posts a storage request on the blockchain. Hosts that want to
+offer storage can fill a slot in the request.
 
 
                                                              --------
@@ -44,7 +44,7 @@ offer storage can fill a slot in the Request.
                                                              --------
 
 
-The Request contains the content identifier, so that hosts can locate
+The request contains the content identifier, so that hosts can locate
 and download the content. It also contains the reward that hosts receive for
 storing the data and the collateral that hosts are expected to deposit. It
 contains parameters pertaining to storage proofs and erasure coding. And
@@ -54,23 +54,23 @@ including a small amount of host losses that can be tolerated.
 
     Request
 
-      cid                             # content identifier
+      cid                     # content identifier
 
-      reward                          # tokens payed per second per filled slot
-      collateral                      # amount of collateral required per host and slot
+      reward                  # tokens payed per second per filled slot
+      collateral              # amount of collateral required per host and slot
 
-      proof probability               # frequency at which proofs are required
-      proof parameters                # proof of retrievability parameters
-      erasure coding                  # erasure coding parameters
-      dispersal                       # dispersal parameter
-      repair reward                   # amount of tokens paid for repairs
+      proof probability       # frequency at which proofs are required
+      proof parameters        # proof of retrievability parameters
+      erasure coding          # erasure coding parameters
+      dispersal               # dispersal parameter
+      repair reward           # amount of tokens paid for repairs
 
-      hosts                           # amount of storage hosts (including loss)
-      loss                            # number of allowed host losses
+      hosts                   # amount of storage hosts (including loss)
+      loss                    # number of allowed host losses
 
-      slots                           # assigned host slots
+      slots                   # assigned host slots
 
-      expire                         # slots need to be filled before timeout
+      expire                  # slots need to be filled before timeout
 
 Slots
 -----
@@ -107,37 +107,37 @@ reserved for repairs. An empty slot can be filled again once another host
 submits a correct proof together with collateral. Payouts for the time interval
 that a slot is empty are burned.
 
-Payouts for all hosts are accumulated in the smart contract and paid out at Request
-end. This is to ensure that the incentive posed by the collateral is not
+Payouts for all hosts are accumulated in the smart contract and paid out at
+request end. This is to ensure that the incentive posed by the collateral is not
 diminished over time.
 
 Contract lifecycle
 ------------------
 
-A Request starts when all slots are filled. Regular storage proofs will be
+A request starts when all slots are filled. Regular storage proofs will be
 required from the hosts that filled the slots.
 
-Some Requests may not attract the required amount of hosts, for instance
+Some requests may not attract the required amount of hosts, for instance
 because the payment is insufficient or the storage demands on the network are
-too high. To ensure that such Requests end, we add a timeout to the Request.
-If the Request failed to attract sufficient hosts before the timeout is
+too high. To ensure that such requests end, we add a timeout to the request.
+If the request failed to attract sufficient hosts before the timeout is
 reached, it is considered cancelled, and the hosts that filled any of the slots
 are able to withdraw their collateral. They are also paid for the time interval
 before the timeout. The client is able to withdraw the rest of the tokens in the
-Request.
+request.
 
-A Request ends when the money that was paid upfront runs out. The end time can
+A request ends when the money that was paid upfront runs out. The end time can
 be calculated from the amount of tokens that are paid out per second. Note that
-in our scheme this amount does not change during the lifetime of the Request,
+in our scheme this amount does not change during the lifetime of the request,
  even when proofs are missed and repair happens. This is a desirable property
 for hosts; they can be sure of a steady source of income, and a predetermined
-Request length. When a Request ends, the hosts may withdraw their collateral.
+request length. When a request ends, the hosts may withdraw their collateral.
 
 When too many hosts fail to submit storage proofs, and no other hosts take over
 the slots that they vacate, then the content can be considered lost. The
-Request is considered failed. The collateral of every host in the Request is
+request is considered failed. The collateral of every host in the request is
 burned as an additional incentive for the network hosts to avoid this scenario.
-The client is able to retrieve any funds that are left in the Request.
+The client is able to retrieve any funds that are left in the request.
 
         |
         | create
@@ -165,13 +165,13 @@ The client is able to retrieve any funds that are left in the Request.
 Repairs
 -------
 
-When a slot is freed because of missing too many storage proofs, some 
-collateral from the host that previously filled the slot is used as an incentive
-to repair the lost content. Repair typically involves downloading other parts of 
-the content and using erasure coding to restore the missing parts. To incentive
-other nodes to do this repair, there is repair fee. It is a partial amount of the original
-host's collateral. The size of the reward is a fraction of slot's collateral
-where the fraction is parameter of the smart contract.
+When a slot is freed because of missing too many storage proofs, some collateral
+from the host that previously filled the slot is used as an incentive to repair
+the lost content. Repair typically involves downloading other parts of the
+content and using erasure coding to restore the missing parts. A repair reward
+is introduced as an incentive for other hosts to do this repair. It is a partial
+amount of the original host's collateral. The size of the reward is a fraction
+of slot's collateral where the fraction is parameter of the smart contract.
 
 The size of the reward should be chosen carefully. It should not be too low, to
 incentivize hosts in the network to prioritize repairs over filling new slots in
@@ -181,16 +181,16 @@ network to try to disable hosts in an attempt to collect the reward.
 Renewal
 -------
 
-When a Request is about to end, and someone in the network wants the Request
-to continue for longer, then they can post a new Request with the same content
+When a request is about to end, and someone in the network wants the request
+to continue for longer, then they can post a new request with the same content
 identifier.
 
-We've chosen not to allow top-ups of existing Requests with new funds. Even
+We've chosen not to allow top-ups of existing requests with new funds. Even
 though this has many advantages (it's a very simple way to extend the lifetime
-of the Request, it allows people to easily chip in to host content, etc.) it
+of the request, it allows people to easily chip in to host content, etc.) it
 has one big disadvantage: hosts no longer know for how long they'll be kept to
-the Request. When a Request is continuously topped up, they cannot leave the
-Request without losing their collateral.
+the request. When a request is continuously topped up, they cannot leave the
+request without losing their collateral.
 
 Dispersal
 ---------
@@ -199,24 +199,24 @@ Here we propose an an alternative way to select hosts for slots that is a
 variant of the "first come, first serve" approach that we described earlier. It
 intends to alleviate these problems:
 
-  1. a single host can fill all slots in a Request
+  1. a single host can fill all slots in a request
   2. a small group of powerful hosts is able to fill most slots in the network
   3. resources are wasted when many hosts try to fill the same slot
 
 For a client it is beneficial when their content is stored on as many different
 hosts as possible, to guard against host failures. Should a single host fill all
-slots in the Request, then the failure of this single host could mean that the
+slots in the request, then the failure of this single host could mean that the
 content is lost.
 
 On a network level, we also want to avoid that a few large players are able to
-fill most Request slots, which would mean that the network becomes fairly
+fill most request slots, which would mean that the network becomes fairly
 centralized.
 
-When too many nodes compete for a slot in a Request, and only one is selected,
+When too many hosts compete for a slot in a request, and only one is selected,
 then this leads to wasted resources in the network. Wasted resources ultimately
 lead to a higher cost of storage.
 
-To alleviate these problems, we introduce a dispersal parameter in the Request. 
+To alleviate these problems, we introduce a dispersal parameter in the request.
 The dispersal parameter allows a client to choose the amount of
 spreading within the network. When a slot becomes empty then only a small amount
 of hosts in the network are allowed to fill the slot. Over time, more and more
@@ -226,7 +226,7 @@ allowed hosts.
 The speed at which new hosts are included is chosen by the client. When the
 client choses a high speed, then very quickly every host in the network will be
 able to fill slots. This increases the chances of a single host to fill all
-slots in a Request. When the client choses a low speed, then it is more likely
+slots in a request. When the client choses a low speed, then it is more likely
 that different hosts fill the slots.
 
 We use the Kademlia distance function to indicate which hosts are allowed to
@@ -269,31 +269,31 @@ Conclusion
 The design that we presented here deviates significantly from the previous
 marketplace design.
 
-There is no explicit negotiation phase for Requests. Clients are no
-longer able to choose which hosts will be responsible for keeping the content on
-the network. This removes the selection step that was required in the old
-design. Instead, a host presents the network with an opportunity to earn money by
-storing content. Hosts can decide whether they want to take part in the
-Request, and if they do they are expected to keep to their part of the deal
-lest they lose their collateral.
+There is no explicit negotiation phase for requests. Clients are no longer able
+to choose which hosts will be responsible for keeping the content on the
+network. This removes the selection step that was required in the old design.
+Instead, a host presents the network with an opportunity to earn money by
+storing content. Hosts can decide whether they want to take part in the request,
+and if they do they are expected to keep to their part of the deal lest they
+lose their collateral.
 
 The first hosts that download the content and provide initial storage proofs are
-awarded slots in the Request. This removes the explicit Request start (and its
+awarded slots in the request. This removes the explicit request start (and its
 associated timeout behavior) that was required in the old design. It also adds
 an incentive to quickly start storing the content while slots are available in
-the Request.
+the request.
 
 While the old design required separate negotiations per host, this design
-ensures that either the single Request starts with all hosts, or is cancelled.
+ensures that either the single request starts with all hosts, or is cancelled.
 This is a significant reduction in the amount of interactions required.
 
 The old design required new negotiations when a host is not able to fulfill its
 obligations, and a separately designed repair protocol. In this design we
 managed to include repair incentives and a repair protocol that is nearly
-identical to Request start.
+identical to request start.
 
 In the old design we had a single collateral per host that could be used to
-cover many Requests. Here we decided to include collateral per Request. This
+cover many requests. Here we decided to include collateral per request. This
 is done to simplify collateral handling, but it is not a requirement of the new
 design. The new design can also be made to work with a single collateral per
 host.
