@@ -42,7 +42,7 @@ global state.
 Adding availability
 -------------------
 
-When a user adds availability, then the reservations module wil check whether
+When a user adds availability, then the reservations module will check whether
 there is enough space available in the Repo. If there is enough space, then it
 will increase the amount of reserved space in the Repo. It persists the state of
 all availabilities to the Datastore, to ensure that they can be restored when a
@@ -64,11 +64,11 @@ Selling storage
 
 When a request for storage is submitted on chain, the sales module decides
 whether or not it wants to act on it. First, it tries to find an availability
-that matches the requested amount, duration, and price. The matching
-availability will be removed from the reservations module, so that it can't be
-sold twice. If an availability matches, but is larger than the requested
-storage, then the Sales module may decide to split the availability into a part
-that we can use for the request, and a remainder that can be sold separately.
+that matches the requested amount, duration, and price. If an availability
+matches, but is larger than the requested storage, then the Sales module may
+decide to split the availability into a part that we can use for the request,
+and a remainder that can be sold separately. The matching availability will be
+set aside so that it can't be sold twice.
 
 It then selects a slot from the request to fill, and starts downloading its
 content chunk by chunk. For each chunk that is successfully downloaded, a bit of
