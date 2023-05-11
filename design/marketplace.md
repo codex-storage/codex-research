@@ -59,8 +59,8 @@ including a small amount of host losses that can be tolerated.
       reward                  # tokens payed per second per filled slot
       collateral              # amount of collateral required per host and slot
 
-      proof probability       # frequency at which proofs are required
-      proof parameters        # proof of retrievability parameters
+      proof probability       # frequency at which storage proofs are required
+      proof parameters        # storage proof parameters
       erasure coding          # erasure coding parameters
       dispersal               # dispersal parameter
       repair reward           # amount of tokens paid for repairs
