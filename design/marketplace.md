@@ -76,7 +76,7 @@ Slots
 -----
 
 Initially all host slots are empty. An empty slot can be filled by anyone by
-submitting a correct storage proof together with collateral.
+depositing collateral and submitting a correct storage proof.
 
 
         proof &                                 proof &
@@ -162,6 +162,90 @@ The client is able to retrieve any funds that are left in the request.
     ---------
 
 
+Slot reservations
+-----------------
+
+Competition between hosts to fill slots has some advantages, such as providing
+an incentive for hosts to become proficient in downloading content and
+generating proofs. It also has some drawbacks, for instance it can lead to
+network inefficiencies because multiple hosts do the work of downloading and
+proving, while only one host is rewarded for it. These inefficiencies lead to
+higher costs for hosts, which leads to an overall increase in the price of
+storage on the network. It can also lead to clients inadvertently inviting too
+much network traffic to themselves. Should they for instance post a very
+lucrative storage request, then this invites a lot of hosts to start downloading
+the content from the client simultaneously, not unlike a DDOS attack.
+
+Slot reservations are a means to avoid these inefficiencies. Before downloading
+the content associated with a slot, a host can deposit collateral to reserve the
+slot. When it succeeds in reserving the slot, then no other hosts can fill the
+slot. After the host downloads the content and calculates a proof it moves the
+slot from its reserved state into the filled state. Then it begins to
+periodically provide storage proofs and accrue payments for the slot.
+
+        collateral               proof
+            |                      |
+            v                      v
+            ------------------------------------------------------------------
+     slot:  |/ / / / / / / / / / / |//////////////////////////////////////////
+            ------------------------------------------------------------------
+            |                      |
+            v                      v
+          slot                    slot
+         reserved                filled
+
+
+            ---------------- time ---------------->
+
+
+Slot reservations could however provide a relatively cheap way for malicious
+hosts to sabotage storage requests, by reserving a slot and never filling it. To
+avoid this we burn the collateral of all reserved slots when the request times
+out. Hosts should therefore be careful to only reserve slots for which they are
+confident that they can fill them before the request timeout.
+
+Burning collateral for slots that are in the reserved state when the request
+times out, does however invite a different type of attack. A malicious client
+could cause hosts to lose collateral on purpose by posting a request for storage
+for content that it never intends to release to the network. Once hosts reserve
+slots in this request, they can never fill them because they will be unable to
+provide a storage proof without the content. To avoid this attack we also burn
+some of the funds from the request when a request times out because of slots
+that are in the reserved state. The more of these slots there are, the more the
+funds are reduced. This makes this type of attack more expensive for a client to
+pull off when the reward is high and the collateral requirements are low. A host
+should take this into account when deciding whether or not to pursue a slot.
+
+Example request with 4 slots:
+
+          request                        request
+           posted                        timeout
+              |                            |
+              v                            v
+              ------------------------------
+     slot 1:  |      | / / / / |///////////|  filled
+              ------------------------------
+
+              ------------------------------
+     slot 2:  |        | / / / / / / / / / |  reserved
+              ------------------------------
+
+              ------------------------------
+     slot 3:  |                            |  free
+              ------------------------------
+
+              ------------------------------
+     slot 4:  |    | / / / / / / / / / / / |  reserved
+              ------------------------------
+
+
+            ---------------- time ---------------->
+
+In this example, the collateral from slot 2 and slot 4 is burned because these
+slots were reserved when the request timed out. Also, 50% of the remaining
+client funds is burned, because out of the 4 slots, 2 were reserved when the
+request timed out.
+
 Repairs
 -------
 
@@ -214,7 +298,9 @@ centralized.
 
 When too many hosts compete for a slot in a request, and only one is selected,
 then this leads to wasted resources in the network. Wasted resources ultimately
-lead to a higher cost of storage.
+lead to a higher cost of storage. Slot reservations help to alleviate this, but
+reserving a slot still requires paying for gas costs. The more hosts try to
+reserve a slot, the more gas fees are wasted.
 
 To alleviate these problems, we introduce a dispersal parameter in the request.
 The dispersal parameter allows a client to choose the amount of
@@ -277,11 +363,10 @@ storing content. Hosts can decide whether they want to take part in the request,
 and if they do they are expected to keep to their part of the deal lest they
 lose their collateral.
 
-The first hosts that download the content and provide initial storage proofs are
-awarded slots in the request. This removes the explicit request start (and its
-associated timeout behavior) that was required in the old design. It also adds
-an incentive to quickly start storing the content while slots are available in
-the request.
+The first hosts that provide collateral are awarded slots in the request. This
+removes the explicit request start (and its associated timeout behavior) that
+was required in the old design. It also adds an incentive to quickly start
+storing the content so that rewards can be accrued.
 
 While the old design required separate negotiations per host, this design
 ensures that either the single request starts with all hosts, or is cancelled.
@@ -293,7 +378,4 @@ managed to include repair incentives and a repair protocol that is nearly
 identical to request start.
 
 In the old design we had a single collateral per host that could be used to
-cover many requests. Here we decided to include collateral per request. This
-is done to simplify collateral handling, but it is not a requirement of the new
-design. The new design can also be made to work with a single collateral per
-host.
+cover many requests. Here we decided to include collateral per slot.
