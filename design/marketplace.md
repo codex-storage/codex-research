@@ -179,7 +179,7 @@ the content from the client simultaneously, not unlike a DDOS attack.
 Slot reservations are a means to avoid these inefficiencies. Before downloading
 the content associated with a slot, a host can deposit collateral to reserve the
 slot. When it succeeds in reserving the slot, then no other hosts can fill the
-slot. After the host downloads the content and calculates a proof it moves the
+slot. After the host downloads the content and calculates a proof, it moves the
 slot from its reserved state into the filled state. Then it begins to
 periodically provide storage proofs and accrue payments for the slot.
 
@@ -200,7 +200,7 @@ periodically provide storage proofs and accrue payments for the slot.
 
 Slot reservations could however provide a relatively cheap way for malicious
 hosts to sabotage storage requests, by reserving a slot and never filling it. To
-avoid this we burn the collateral of all reserved slots when the request times
+avoid this we burn the collateral of all reserved (but not filled) slots when the request times
 out. Hosts should therefore be careful to only reserve slots for which they are
 confident that they can fill them before the request timeout.
 
@@ -209,9 +209,8 @@ times out, does however invite a different type of attack. A malicious client
 could cause hosts to lose collateral on purpose by posting a request for storage
 for content that it never intends to release to the network. Once hosts reserve
 slots in this request, they can never fill them because they will be unable to
-provide a storage proof without the content. To avoid this attack we also burn
-some of the funds from the request when a request times out because of slots
-that are in the reserved state. The more of these slots there are, the more the
+provide a storage proof without the content. To avoid this attack, we also burn
+a portion of funds from the request when a request times out, proportional to the number of slots in the reserved state. The more of these slots there are, the more the
 funds are reduced. This makes this type of attack more expensive for a client to
 pull off when the reward is high and the collateral requirements are low. A host
 should take this into account when deciding whether or not to pursue a slot.
@@ -255,7 +254,7 @@ the lost content. Repair typically involves downloading other parts of the
 content and using erasure coding to restore the missing parts. A repair reward
 is introduced as an incentive for other hosts to do this repair. It is a partial
 amount of the original host's collateral. The size of the reward is a fraction
-of slot's collateral where the fraction is parameter of the smart contract.
+of slot's collateral where the fraction is a parameter of the smart contract.
 
 The size of the reward should be chosen carefully. It should not be too low, to
 incentivize hosts in the network to prioritize repairs over filling new slots in
