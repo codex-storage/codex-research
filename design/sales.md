@@ -140,6 +140,47 @@ the state is kept on local disk by the Repo and the Datastore. How much space is
 reserved to be sold is persisted on disk by the Repo. The availabilities are
 persisted on disk by the Datastore.
 
+Request queue
+----------
+Once a new request for storage is created on chain, all hosts will receive a
+contract event announcing the storage request and decide if they want to act on
+the request by matching their availabilities with the incoming request. Because
+there will be many requests being announced over time, each host will create a
+queue of matching requests, adding each new storage request to the queue.
+Requests in the queue will be sorted in the following order:
+1. Profit (descending, yet to be determined how this will be calculated)
+2. Collateral required (ascending)
+3. Time before expiry (descending)
+4. Data size (ascending)
+
+Queue processing will be started only once, when the sales module starts and will
+process requests continuously, in order, until the queue is empty. If the
+queue is empty, processing of the queue will resume once items have been added
+to the queue. If the queue is not empty, but there are no availabilities, queue
+processing should be parked until availabilites have been added.
+
+When a request is processed, it first is checked to ensure there is a matching
+availabilty, as these availabilities will have changed over time. Then, a random
+slot will be chosen, and the sales process will begin. The start of the sales
+process should ensure that the random slot chosen is indeed available (slot
+state is "free") before continuing. If it is not available, the sales process
+will exit and the host will process the top request in the queue. Note: it may
+be that the top request in the queue is the same request that was just
+processed, however if the request remains in the queue, it means that there are
+still slots to be filled (request hasn't started or expired yet). This
+re-processing of the same request allows for the possibility that the random
+slot index chosen had already been filled by another host, and gives the host a
+chance to fill a different slot index of the same request.
+
+Hosts will also recieve contract events for when any contract is started,
+failed, or cancelled. In all of these cases, requests in the queue should be
+removed as they are no longer fillable by the host.
+
+Request queue implementations should keep in mind that requests will likely need
+to be accessed randomly (by key, eg request id) and by index (for sorting), so
+implemented structures should handle these types of operations in a little time
+as possible.
+
 Repo
 ----
 
