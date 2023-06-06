@@ -62,7 +62,7 @@ including a small amount of host losses that can be tolerated.
       proof probability       # frequency at which storage proofs are required
       proof parameters        # storage proof parameters
       erasure coding          # erasure coding parameters
-      dispersal               # dispersal parameter
+      spreading               # spreading parameter
       repair reward           # amount of tokens paid for repairs
 
       hosts                   # amount of storage hosts (including loss)
@@ -202,7 +202,7 @@ proofs and accrue payments for the slot.
 Slot reservations could however provide a relatively cheap way for malicious
 hosts to sabotage storage requests, by reserving a slot and never filling it.
 There are two mechanisms that make this a costly attack to pull off. First,
-there are the gas fees for the call to reserve a slot. Secondly, the dispersal
+there are the gas fees for the call to reserve a slot. Secondly, the spreading
 mechanism described below makes it harder to censor particular storage requests,
 because it is unlikely that a malicious host has a short kademlia distance to
 these storage requests.
@@ -237,7 +237,7 @@ has one big disadvantage: hosts no longer know for how long they'll be kept to
 the request. When a request is continuously topped up, they cannot leave the
 request without losing their collateral.
 
-Dispersal
+Spreading
 ---------
 
 Here we propose an an alternative way to select hosts for slots that is a
@@ -263,11 +263,12 @@ lead to a higher cost of storage. Slot reservations help to alleviate this, but
 reserving a slot still requires paying for gas costs. The more hosts try to
 reserve a slot, the more gas fees are wasted.
 
-To alleviate these problems, we introduce a dispersal parameter in the request.
-The dispersal parameter allows a client to choose the amount of spreading within
-the network. When a slot becomes empty then only a small amount of hosts in the
-network are allowed to fill the slot. Over time, more and more hosts will be
-allowed to fill a slot. Each slot starts with a different set of allowed hosts.
+To alleviate these problems, we introduce a spreading parameter in the request.
+The spreading parameter allows a client to choose the amount of distribution
+within the network. When a slot becomes empty then only a small amount of hosts
+in the network are allowed to fill the slot. Over time, more and more hosts will
+be allowed to fill a slot. Each slot starts with a different set of allowed
+hosts.
 
 The speed at which new hosts are included is chosen by the client. When the
 client choses a high speed, then very quickly every host in the network will be
@@ -280,7 +281,7 @@ fill a slot.
 
     distance between a and b:   xor(a, b)
     slot start point:           hash(nonce || slot number)
-    allowed distance:           elapsed time * dispersal parameter
+    allowed distance:           elapsed time * spreading parameter
 
 
 Each slot has a different start point:
@@ -305,8 +306,8 @@ point is less that the allowed distance.
 Note that even though we use the Kademlia distance function, this bears no
 relation to the DHT. We use the blockchain address of the host, not its peer id.
 
-This dispersal mechanism still requires modeling to check that it meets its
-goals, and to find the optimal value for the dispersal parameter, given certain
+This spreading mechanism still requires modeling to check that it meets its
+goals, and to find the optimal value for the spreading parameter, given certain
 network conditions. It is also worth looking into simpler alternatives.
 
 Conclusion
