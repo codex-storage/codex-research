@@ -177,13 +177,14 @@ lucrative storage request, then this invites a lot of hosts to start downloading
 the content from the client simultaneously, not unlike a DDOS attack.
 
 Slot reservations are a means to avoid these inefficiencies. Before downloading
-the content associated with a slot, a host can deposit collateral to reserve the
-slot. When it succeeds in reserving the slot, then no other hosts can fill the
-slot. After the host downloads the content and calculates a proof, it moves the
-slot from its reserved state into the filled state. Then it begins to
-periodically provide storage proofs and accrue payments for the slot.
+the content associated with a slot, a host reserves the slot. No collateral is
+required yet. When it succeeds in reserving the slot, then no other hosts can
+fill the slot. After the host downloads the content and calculates a proof, it
+can move the slot from its reserved state into the filled state by providing
+collateral and the storage proof. Then it begins to periodically provide storage
+proofs and accrue payments for the slot.
 
-        collateral               proof
+         reserve             proof & collateral
             |                      |
             v                      v
             ------------------------------------------------------------------
@@ -199,51 +200,12 @@ periodically provide storage proofs and accrue payments for the slot.
 
 
 Slot reservations could however provide a relatively cheap way for malicious
-hosts to sabotage storage requests, by reserving a slot and never filling it. To
-avoid this we burn the collateral of all reserved (but not filled) slots when the request times
-out. Hosts should therefore be careful to only reserve slots for which they are
-confident that they can fill them before the request timeout.
-
-Burning collateral for slots that are in the reserved state when the request
-times out, does however invite a different type of attack. A malicious client
-could cause hosts to lose collateral on purpose by posting a request for storage
-for content that it never intends to release to the network. Once hosts reserve
-slots in this request, they can never fill them because they will be unable to
-provide a storage proof without the content. To avoid this attack, we also burn
-a portion of funds from the request when a request times out, proportional to the number of slots in the reserved state. The more of these slots there are, the more the
-funds are reduced. This makes this type of attack more expensive for a client to
-pull off when the reward is high and the collateral requirements are low. A host
-should take this into account when deciding whether or not to pursue a slot.
-
-Example request with 4 slots:
-
-          request                        request
-           posted                        timeout
-              |                            |
-              v                            v
-              ------------------------------
-     slot 1:  |      | / / / / |///////////|  filled
-              ------------------------------
-
-              ------------------------------
-     slot 2:  |        | / / / / / / / / / |  reserved
-              ------------------------------
-
-              ------------------------------
-     slot 3:  |                            |  free
-              ------------------------------
-
-              ------------------------------
-     slot 4:  |    | / / / / / / / / / / / |  reserved
-              ------------------------------
-
-
-            ---------------- time ---------------->
-
-In this example, the collateral from slot 2 and slot 4 is burned because these
-slots were reserved when the request timed out. Also, 50% of the remaining
-client funds is burned, because out of the 4 slots, 2 were reserved when the
-request timed out.
+hosts to sabotage storage requests, by reserving a slot and never filling it.
+There are two mechanisms that make this a costly attack to pull off. First,
+there are the gas fees for the call to reserve a slot. Secondly, the dispersal
+mechanism described below makes it harder to censor particular storage requests,
+because it is unlikely that a malicious host has a short kademlia distance to
+these storage requests.
 
 Repairs
 -------
@@ -302,11 +264,10 @@ reserving a slot still requires paying for gas costs. The more hosts try to
 reserve a slot, the more gas fees are wasted.
 
 To alleviate these problems, we introduce a dispersal parameter in the request.
-The dispersal parameter allows a client to choose the amount of
-spreading within the network. When a slot becomes empty then only a small amount
-of hosts in the network are allowed to fill the slot. Over time, more and more
-hosts will be allowed to fill a slot. Each slot starts with a different set of
-allowed hosts.
+The dispersal parameter allows a client to choose the amount of spreading within
+the network. When a slot becomes empty then only a small amount of hosts in the
+network are allowed to fill the slot. Over time, more and more hosts will be
+allowed to fill a slot. Each slot starts with a different set of allowed hosts.
 
 The speed at which new hosts are included is chosen by the client. When the
 client choses a high speed, then very quickly every host in the network will be
@@ -362,10 +323,10 @@ storing content. Hosts can decide whether they want to take part in the request,
 and if they do they are expected to keep to their part of the deal lest they
 lose their collateral.
 
-The first hosts that provide collateral are awarded slots in the request. This
-removes the explicit request start (and its associated timeout behavior) that
-was required in the old design. It also adds an incentive to quickly start
-storing the content so that rewards can be accrued.
+The first hosts that provide collateral and a storage proof are awarded slots in
+the request. This removes the explicit request start (and its associated timeout
+behavior) that was required in the old design. It also adds an incentive to
+quickly start storing the content so that rewards can be accrued.
 
 While the old design required separate negotiations per host, this design
 ensures that either the single request starts with all hosts, or is cancelled.
