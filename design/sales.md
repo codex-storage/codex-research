@@ -187,13 +187,18 @@ processed contains one or more slot indices (as in the case of repair), the
 random slot should be chosen from that sample of indices. The start of the sales
 process should ensure that the random slot chosen is indeed available (slot
 state is "free") before continuing. If it is not available, the sales process
-will exit and the host will process the top request in the queue. Note: it may
-be that the top request in the queue is the same request that was just
-processed, indicating that the request still has slots to be filled, as the
-request was had not yet been removed due to being started/failed/cancelled. This
-re-processing of the same request allows for the possibility that the random
-slot index chosen had already been filled by another host, and gives the host a
-chance to fill a different slot index of the same request.
+will exit and the host will process the top request in the queue. The start of
+the sales process should also check to ensure the host is allowed to fill the
+slot, due to the [sliding window
+mechanism](https://github.com/codex-storage/codex-research/blob/master/design/marketplace.md#dispersal).
+If the host is not allowed to fill the slot, the sales process will exit and the
+host will process the top request in the queue. Note: it may be that the top
+request in the queue is the same request that was just processed, indicating
+that the request still has slots to be filled, as the request was had not yet
+been removed due to being started/failed/cancelled. This re-processing of the
+same request allows for the possibility that the random slot index chosen had
+already been filled by another host, and gives the host a chance to fill a
+different slot index of the same request.
 
 ### Implementation tips
 
