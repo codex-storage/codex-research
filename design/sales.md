@@ -191,9 +191,16 @@ to the queue.
 As soon as items are available in the queue, and there are workers available for
 processing, an item is popped from the queue.
 
-> NOTE: queue processing should not be resumed once availabilites have been
-added as this would require keeping track of all requests on the network while
-there are no host availabilities, which would have a large memory impact.
+> NOTE: the previous design suggested, "if the queue is not empty, but there are
+no availabilities, queue processing will resume once availabilites have been
+added". However, this is no longer recommended. Resumuption of queue processing
+once availabilites have been added would require the host to keep track of all
+new storage requests on the network while there are no host availabilities. If
+availabilities are eventually added, the backlog of network requests would need
+to be compared to availabilities to potentially be added to the slot queue (if
+there are matches). Maintaining this backlog of requests could potentially have
+a large memory impact, and may not even be necessary if the host never adds (or
+does not add for a long duration) availabilities.
 
 When a slot is processed, it is first checked to ensure there is a matching
 availabilty, as these availabilities will have changed over time. Then, the
@@ -205,7 +212,7 @@ process should also check to ensure the host is allowed to fill the slot, due to
 the [sliding window
 mechanism](https://github.com/codex-storage/codex-research/blob/master/design/marketplace.md#dispersal).
 If the host is not allowed to fill the slot, the sales process will exit and the
-host will process the top request in the queue.
+host will process the top slot in the queue.
 
 #### Queue workers
 Each time an item in the queue is processed, it is assigned to a workers. The
