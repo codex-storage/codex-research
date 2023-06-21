@@ -135,70 +135,88 @@ the state is kept on local disk by the Repo and the Datastore. How much space is
 reserved to be sold is persisted on disk by the Repo. The availabilities are
 persisted on disk by the Datastore.
 
-## Request queue
+## Slot queue
 
 Once a new request for storage is created on chain, all hosts will receive a
 contract event announcing the storage request and decide if they want to act on
 the request by matching their availabilities with the incoming request. Because
 there will be many requests being announced over time, each host will create a
-queue of matching requests, adding each new storage request to the queue.
+queue of matching request slots, adding each new storage slot to the queue.
 
-### Adding requests to the queue
+### Adding slots to the queue
 
-Requests will be added to the queue when request for storage events are received
+Slots will be added to the queue when request for storage events are received
 from the contracts. Additionally, when slots are freed, a contract event will
-also be received, and the request (and slot index) will be added to the queue.
-If the request of the freed slot already exists in the queue, the entry will be
-updated to include the slot index (multiple slot indices should be allowed).
+also be received, and the slot will be added to the queue. Duplicates are
+ignored.
 
-### Removing requests from the queue
+When all slots of a request are added to the queue, the order should be randomly
+shuffled, as there will be many hosts in the network that could potentially pick
+up the request and will process the first slot in the queue at the same time.
+This should avoid some clashes in slot indices chosen by competing hosts.
+
+### Removing slots from the queue
 
 Hosts will also recieve contract events for when any contract is started,
-failed, or cancelled. In all of these cases, requests in the queue should be
-removed as they are no longer fillable by the host. Note: expired requests will
-be checked when a request is processed and its state is validated.
+failed, or cancelled. In all of these cases, slots in the queue pertaining to
+these requests should be removed as they are no longer fillable by the host.
+Note: expired request slots will be checked when a request is processed and its
+state is validated.
 
 ### Sort order
 
-Requests in the queue should be sorted in the following order:
-1. Profit (descending, yet to be determined how this will be calculated)
+Slots in the queue should be sorted in the following order:
+1. Profit (descending)<sup>1</sup>
 2. Collateral required (ascending)
 3. Time before expiry (descending)
 4. Dataset size (ascending)
 
+<sup>1</sup> While profit cannot yet be calculated correctly as this calculation will
+  involve bandwidth incentives, profit can be estimated as `duration * reward`
+  for now.
+
 Note: datset size may eventually be included in the profit algorithm and may not
-need to be included in the future. Additionally, data dispersal may also impact
-the datset size to be downloaded by the host, and consequently the profitability
-of servicing a storage request, which will need to be considered in the future
-once profitability can be calculated.
+need to be included on its own in the future. Additionally, data dispersal may
+also impact the datset size to be downloaded by the host, and consequently the
+profitability of servicing a storage request, which will need to be considered
+in the future once profitability can be calculated.
 
 ### Queue processing
 
 Queue processing will be started only once, when the sales module starts and
-will process requests continuously, in order, until the queue is empty. If the
+will process slots continuously, in order, until the queue is empty. If the
 queue is empty, processing of the queue will resume once items have been added
-to the queue. If the queue is not empty, but there are no availabilities, queue
-processing will resume once availabilites have been added.
+to the queue.
 
-When a request is processed, it first is checked to ensure there is a matching
-availabilty, as these availabilities will have changed over time. Then, a random
-slot will be chosen, and the sales process will begin. If the request being
-processed contains one or more slot indices (as in the case of repair), the
-random slot should be chosen from that sample of indices. The start of the sales
-process should ensure that the random slot chosen is indeed available (slot
-state is "free") before continuing. If it is not available, the sales process
-will exit and the host will process the top request in the queue. The start of
-the sales process should also check to ensure the host is allowed to fill the
-slot, due to the [sliding window
+As soon as items are available in the queue, and there are workers available for
+processing, an item is popped from the queue.
+
+> NOTE: queue processing should not be resumed once availabilites have been
+added as this would require keeping track of all requests on the network while
+there are no host availabilities, which would have a large memory impact.
+
+When a slot is processed, it is first checked to ensure there is a matching
+availabilty, as these availabilities will have changed over time. Then, the
+sales process will begin. The start of the sales process should ensure that the
+slot being processed is indeed available (slot state is "free") before
+continuing. If it is not available, the sales process will exit and the host
+will continue to process the top slot in the queue. The start of the sales
+process should also check to ensure the host is allowed to fill the slot, due to
+the [sliding window
 mechanism](https://github.com/codex-storage/codex-research/blob/master/design/marketplace.md#dispersal).
 If the host is not allowed to fill the slot, the sales process will exit and the
-host will process the top request in the queue. Note: it may be that the top
-request in the queue is the same request that was just processed, indicating
-that the request still has slots to be filled, as the request was had not yet
-been removed due to being started/failed/cancelled. This re-processing of the
-same request allows for the possibility that the random slot index chosen had
-already been filled by another host, and gives the host a chance to fill a
-different slot index of the same request.
+host will process the top request in the queue.
+
+#### Queue workers
+Each time an item in the queue is processed, it is assigned to a workers. The
+number of allowed workers can be specified during queue creation. Specifying a
+limited number of workers allows the number of concurrent items being processed
+to be capped to prevent too many slots from being processed at once.
+
+During queue processing, only when there is a free worker will an item be popped
+from the queue and processed. Each time an item is popped and processed, a
+worker is removed from the available workers. If there are no available workers,
+queue processing will resume once there are workers available.
 
 ### Implementation tips
 
