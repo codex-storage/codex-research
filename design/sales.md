@@ -155,6 +155,10 @@ shuffled, as there will be many hosts in the network that could potentially pick
 up the request and will process the first slot in the queue at the same time.
 This should avoid some clashes in slot indices chosen by competing hosts.
 
+Before slots can be added to the queue, availabilities must be checked to ensure
+a matching availability exists. This filtering prevents all slots in the network
+from entering the queue.
+
 ### Removing slots from the queue
 
 Hosts will also recieve contract events for when any contract is started,
@@ -186,21 +190,11 @@ in the future once profitability can be calculated.
 Queue processing will be started only once, when the sales module starts and
 will process slots continuously, in order, until the queue is empty. If the
 queue is empty, processing of the queue will resume once items have been added
-to the queue.
+to the queue. If the queue is not empty, but there are no availabilities, queue
+processing will resume once availabilites have been added.
 
 As soon as items are available in the queue, and there are workers available for
-processing, an item is popped from the queue.
-
-> NOTE: the previous design suggested, "if the queue is not empty, but there are
-no availabilities, queue processing will resume once availabilites have been
-added". However, this is no longer recommended. Resumuption of queue processing
-once availabilites have been added would require the host to keep track of all
-new storage requests on the network while there are no host availabilities. If
-availabilities are eventually added, the backlog of network requests would need
-to be compared to availabilities to potentially be added to the slot queue (if
-there are matches). Maintaining this backlog of requests could potentially have
-a large memory impact, and may not even be necessary if the host never adds (or
-does not add for a long duration) availabilities.
+processing, an item is popped from the queue and processed.
 
 When a slot is processed, it is first checked to ensure there is a matching
 availabilty, as these availabilities will have changed over time. Then, the
@@ -224,6 +218,16 @@ During queue processing, only when there is a free worker will an item be popped
 from the queue and processed. Each time an item is popped and processed, a
 worker is removed from the available workers. If there are no available workers,
 queue processing will resume once there are workers available.
+
+#### Adding availabilities
+When a host adds an availability, a signal is triggered in the slot queue with
+information about the availability. This triggers a lookup of past request for
+storage events, capped at a certain number of past events or blocks. The slots
+of the requests in each of these events are added to the queue, where slots
+without matching availabilities are filtered out (see [Adding slots
+to the queue](#adding-slots-to-the-queue) above). Additionally, when slots of
+these requests are processed in the queue, they will be checked to ensure that
+the slots are not filled (see [Queue processing](#queue-processing) above).
 
 ### Implementation tips
 
