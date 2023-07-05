@@ -50,7 +50,7 @@ As already mentioned, the new mechanism proposed here, removes the blocks array 
 
 ## Implementation overview
 
-This mechanism require an efficient Merkle tree implementation, which also allows persisting the leafs and intermediary hashes to disk; changes to the block exchange engine to support querying blocks by root hash and block index; and integration with the block store abstraction.
+This mechanism requires an efficient Merkle tree implementation, which also allows persisting the leafs and intermediary hashes to disk; changes to the block exchange engine to support querying blocks by root hash and block index; and integration with the block store abstraction.
 
 ### Merkle Tree
 
