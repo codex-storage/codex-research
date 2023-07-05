@@ -64,7 +64,7 @@ The block exchange engine requires support for querying blocks by their index an
 
 #### Announcing over the DHT
 
-Also, datasets are now announced by their Merkle root instead of each individual block as was the case in the previous implementation. Announcing individual blocks is still supported, for example manifests are announced exactly the same as before, by their cid. Announcing individual blocks is also supported (but not required) and can be usefull in the case of bandwidth incentives.
+Also, datasets are now announced by their Merkle root instead of each individual block as was the case in the previous implementation. Announcing individual blocks is still supported, for example manifests are announced exactly the same as before, by their cid. Announcing individual blocks is also supported (but not required) and can be useful in the case of bandwidth incentives.
 
 ### Block Stores and Local Repo
 
