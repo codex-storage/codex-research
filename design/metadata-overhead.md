@@ -68,7 +68,7 @@ Also, datasets are now announced by their Merkle root instead of each individual
 
 ### Block Stores and Local Repo
 
-All interaction with blocks/chunks sit behind the `BlockStore` abstraction, which currently only supports querying blocks by hash. It should be extended to allow querying by Merkle root and block index and/or range.
+All interactions with blocks/chunks sit behind the `BlockStore` abstraction, which currently only supports querying blocks by hash. It should be extended to allow querying by Merkle root and block index and/or range.
 
 The local repo should be aware of the persisted Merkle tree. When a requests by index is made, the store first locates the persisted Merkle tree corresponding to the specified root and retrieves the requested leaf and corresponding Merkle proofs.
 
