@@ -207,6 +207,6 @@ Keeping support for hash based retrieval (content addressing) has two main advan
             1. Once new peers have been discovered and connected, go to step 1.1.1
 2. Once blocks are received from the remote nodes
    1. The hashes are verified against the requested Merkle root and if they pass
-      1. The block is persisted to the network
+      1. The block is persisted to the repo/local store
       2. The block hash (cid) and the Merkle proof are stored in the persisted Merkle tree
    2. Otherwise, the block is discarded and the node that sent the incorrect block disconnected
