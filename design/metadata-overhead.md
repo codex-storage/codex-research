@@ -4,7 +4,7 @@ Metadata plays a crucial role in any distributed or peer-to-peer (p2p) storage n
 
 ## Metadata and Manifests
 
-Codex, utilizes a metadata descriptor structure called the "manifest". A manifest is similar to a torrent file and stores various pieces of information necessary to describe a dataset.
+Codex utilizes a metadata descriptor structure called the "manifest". A manifest is similar to a torrent file and stores various pieces of information necessary to describe a dataset.
 
 ```
   Manifest
