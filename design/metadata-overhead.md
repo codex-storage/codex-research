@@ -60,7 +60,7 @@ The block hashes array is replaced by a Merkle tree. The Merkle tree should supp
 
 #### Block Exchange Engine
 
-The block exchange engine requires support for querying blocks by their index and respective dataset Merkle root. It also requires returning the Merkle proofs along side the chunk so that it can be readilly verified. Scheduling blocks for retrieval should largely remain the same, but additional request and response messages are required.
+The block exchange engine requires support for querying blocks by their index and respective dataset Merkle root. It also requires returning the Merkle proofs along side the chunk so that it can be readily verified. Scheduling blocks for retrieval should largely remain the same, but additional request and response messages are required.
 
 #### Announcing over the DHT
 
