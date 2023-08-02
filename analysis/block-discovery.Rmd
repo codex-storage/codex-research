@@ -1,0 +1,104 @@
+---
+title: "Block Discovery Problem"
+output: 
+  bookdown::gitbook:
+    number_sections: false
+---
+
+$$
+\newcommand{\rv}[1]{\textbf{#1}}
+\newcommand{\imin}{\rv{I}_{\text{min}}}
+$$
+
+## Problem Statement
+
+Let $F = \left\{b_1, \cdots, b_m\right\}$ be an erasure-coded file, and let $O = \left\{o_1, \cdots, o_n\right\}$ be a set of nodes storing that file. We define a _storage function_ $s \longrightarrow O \times 2^F$ as a function mapping subsets of $F$ into nodes in $O$.
+
+In the simplified block discovery problem, we have a _downloader node_ which is attempting to construct a subset $D \subseteq F$ of blocks by repeatedly sampling nodes from $O$. "Discovery", in this context, can be seen as the downloader node running a round-based protocol where, at round $i$, it samples a random contact $o_i$ and learns about $s(o_i)$.
+
+To make this slightly more formal, we denote $D_i \subseteq F$ to be the set of blocks that the downloader has learned after $i^{th}$ contact. By the way we state the protocol to work, we have that:
+
+$$
+\begin{equation}
+  D_i = D_{i - 1} \cup s(o_i)
+  (\#eq:discovery)
+\end{equation}
+$$
+
+Since the file is erasure coded, the goal of the downloader is to learn some $D_i$ such that:
+
+$$
+\begin{equation}
+  \left|D_i\right| \geq c \times \left|F\right|
+  (\#eq:complete)
+\end{equation}
+$$
+
+When $D_i$ satisfies Eq. \@ref(eq:complete), we say that $D_i$ is _complete_. We can then state the problem as follows.
+
+**Statement.** Let $\imin$ be a random variable representing the first round at which $D_i$ is complete. We want to estimate $F(i) = \mathbb{P}(\imin \leq i)$; namely, the probability that the downloader has discovered all relevant blocks by round $i$. 
+
+## Case (1) - Erasure Coding but no Replication
+
+If we assume there is no replication then, unless we contact the same node twice, every node we contact contributes with new information. Indeed, the absence of replication implies, necessarily, that:
+
+$$
+\begin{equation}
+  \bigcap_{o \in O} s(o) = \emptyset 
+  (\#eq:disjoint)
+\end{equation}
+$$
+
+So that if we are contacting a new node at round $i$, we must necessarily have that:
+
+$$
+\begin{equation}
+  \left|D_{i}\right| \stackrel{1}{=} \left|D_{i - 1} \cup s(o_i)\right| \stackrel{2}{=} \left|D_{i - 1}\right| + \left|s(o_i)\right|
+  (\#eq:monotonic)
+\end{equation}
+$$
+Where (1) follows from Eq. \@ref(eq:discovery), and (2) follows from the $s(o_i)$ being disjoint (Eq. \@ref(eq:disjoint)). This leads to the corollary:
+
+**Corollary 1.** After $\lceil c \times n\rceil$ rounds, the downloader will necessarily have learned enough blocks to download $F$.
+
+which follows trivially from Eq. \@ref(eq:monotonic) and the implication that $D_{\lceil c \times n\rceil}$ must be complete. $\blacksquare$
+
+As for $F(i)$, note that we can estimate the probability of completion by estimating the probability that $|D_i|$ is bigger than the completion number (Eq. \@ref(eq:complete)). How exactly that looks like and how tractable it is, however, depends on the formulation we give it.
+
+### Independent Partition Sizes
+
+Suppose we knew the distribution for partition sizes in $O$, i.e., we knew that the number of blocks assigned to a node in $O$ follows some distribution $\mathcal{B}$ (e.g., a truncated Gaussian).
+
+If we have a "large enough" network, this means we would be able to approximate the number of blocks assigned to each node as $m$ independent random variables $\rv{Y}_i$, where $\rv{Y}_i \sim \mathcal{B}$. In that case, we would be able to express the total number of blocks learned by the downloader by round $i$ as a random variable $\rv{L}_i$ which represents the sum of the iid random variables $\rv{Y}_j \sim \mathcal{B}$:
+
+$$
+\begin{equation}
+  \rv{L}_i \sim \sum_{j = 1}^{i} \rv{Y}_j 
+  (\#eq:learning-sum)
+\end{equation}
+$$
+
+The shape of the distribution would be the $i$-fold convolution of $\mathcal{B}$ with itself, which can be tractable for some distributions.
+
+More interestingly, though, Eq. \@ref(eq:learning-sum) allows us to express a $\mathcal{B}$-independent estimate of the average number of rounds a downloader will undergo before completing a download. We have that:
+
+$$
+\mathbb{E}(\rv{L}_i) \sim \sum_{j = 1}^i \mathbb{E}(\rv{Y}_j)  = i\mathbb{E}(\rv{Y}) = i\times \mu_{\rv{Y}}
+$$
+
+We can then solve for $i$ and the completion condition to get:
+
+$$
+\begin{equation}
+  i \times \mu_{\rv{Y}} \geq c \times |F| \iff i \geq \frac{c \times |F|}{\mu_{\rv{Y}}}
+  (\#eq:average-completion)
+\end{equation}
+$$
+
+note that this is intuitive to the point of being trivial. If we let $c = 1$, we get $i \geq |F|/\mu_{\rv{Y}}$, which just means that on average the node will have to sample a number of nodes equal to the number of blocks over the average partition size. In practice we can use $\overline{\mu_\rv{Y}} = \frac{1}{m}\sum_i \left|s(o_i)\right|$ instead of $\mu_{\rv{Y}}$ to estimate what $i$ can look like.
+
+### Non-Independent Partition Sizes
+
+If we cannot approximate partition sizes and independent random variables, then the problem changes. Stripping it down, we can cast it as follows. We have a set of integers $P = \{p_1, \cdots, p_m\}$ representing the sizes of each partition. We then want to understand the distribution of the partial sums for random permutations of $P$. 
+
+As I understand it, there is no good way of addressing this without running simulations. The difference is that if we assume disjoint partitions then the simulations are a lot simpler as we do not need to track the contents of $D_i$.
