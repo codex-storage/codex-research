@@ -1,0 +1,222 @@
+---
+title: "Codex Swarm Overlays"
+output: 
+  bookdown::gitbook:
+    pandoc_args: [ "--csl", "ieee.csl" ]
+    split_by: none
+
+bibliography: [bibliography.bib]
+link-citations: true
+---
+
+
+```{r cache=FALSE, echo=FALSE, warning=FALSE, message=FALSE}
+knitr::read_chunk('R/swarmoverlay.R')
+knitr::read_chunk('R/dissemination.R')
+devtools::load_all()
+```
+
+# Context
+
+As we evolved an understanding on what needs to be understood about our swarm protocol, we realized there might be questions that are more important and more within reach than expected.
+
+# Graph Structure
+
+Our protocol works by having a node join the network and ask a _bootstrap node_ for a random subset of size $d$ of the nodes that are currently in the swarm. Absent any dynamics, this should intuitively converge into a variant of a $G(n, p = 1/d)$, [Erdös-Rényi](https://en.wikipedia.org/wiki/Erd%C5%91s%E2%80%93R%C3%A9nyi_model) model, whose connectivity and diameters are well-studied.
+
+For instance, we know that if $p > (1+ \varepsilon )\ln n/n$, then $G$ is connected almost surely. Almost surely, however, means that the graph might be disconnected, particularly for small $n$. 
+
+The diameter of such graphs, on the other hand, is relatively poorly understood, with numeric results being published only relatively recently, for certain values of $p$ [@hartmann-18], and with no publicly available data or code for us to study the problem further.
+
+Furthermore, it is clear that our graphs will have a different degree distribution from Erdös-Renyi graphs as the generating game for the graph is different -- nodes that enter the network early will tend to have higher degrees than nodes that enter the network late. This can lead to load imbalances, which we also intend to look into.
+
+# Initial Questions
+
+Given a network $N = \left\{o_1, \cdots, o_n\right\}$ with $n$ nodes:
+
+1. How often will there be disconnected clusters?
+2. What is the degree distribution for these graphs?
+3. How fast should we expect a block to _percolate_ over the network as we vary the proportions of storage nodes vs. downloader nodes?
+
+We can provide preliminary answers to these questions by means of simple simulations. 
+
+## Generating Overlay Samples
+
+The algorithm for generating overlay graphs -- which will be used throughout our experiments -- is shown below. The key is the `node_edges` procedure, where we simulate a node being bootstrapped from a replicated tracker with a subset of the nodes already in the swarm as its neighbors:
+
+```{r swarm-overlay}
+```
+
+Fig \@ref(fig:example-overlay) shows a sample overlay generated using the algorithm. Note that, as expected, nodes that enter the network earlier (have a lower id number) tend to exhibit higher degrees.
+
+```{r example-overlay, fig.cap="A sample of $G(15, 2)$.", warning=FALSE, fig.align="center"}
+swarm_overlay(15, 2, directed = TRUE) |> 
+  ggraph(layout = "stress") +
+  geom_edge_link(
+    arrow = arrow(length = unit(0.1, "inches")), 
+    end_cap = circle(3, 'mm')
+  ) + 
+  geom_node_point(size = 8) +
+  geom_node_text(aes(label = name), col = "white") +
+  theme_graph() +
+  set_graph_style(face = "bold")
+```
+
+## How Often Will There Be Disconnected Clusters?
+
+Theory from Erdös-Renyi graphs puts the connectivity threshold at $\frac{(1 + \epsilon) \ln n}{n}$, but our graphs are different enough that we can make more precise statements.
+
+**Theorem 1.** If edges are undirected, then $G(n, d)$ is _always_ connected. If edges are directed, on the other hand, then $G(n, d)$ is _never_ strongly connected.
+
+For part 1, the reasoning is inductive: assuming that $G(n - 1, d)$ forms a connected component, then $G(n, d)$ must also form a connected component as the $n^{th}$ node will have undirected edges into $G(n - 1, d)$.
+
+Part 2 on the other hand follows trivially from the fact that node $1$, the first node in the network, has no outbound edges, and is therefore will always be out of the strongly connected component in the graph. $\blacksquare$
+
+Because of the way we propose the protocol to work, we can assume our graphs to be undirected for the time being.
+
+## What is the degree distribution for these graphs?
+
+To try to get a grip on degree distributions, will look into graphs $G_{i,j} = (V_i, E_j)$ where:
+
+$$
+|V_i| = 10 \times 2^i
+$$
+this means we start with a graph of size $10$ and then double its size for $i = \{0, \cdots, 7\}$. 
+
+```{r}
+v_i <- function(i) 10 * (2**i)
+```
+
+We will then look at values for $d$ which range from $1$ to the critical threshold for percolation in Erdös-Renyi graphs, meaning:
+
+$$
+1 \leq d \leq \left\lceil\ln |V_i|\right\rceil
+$$
+
+with $d \in \mathbb{N}$.
+
+```{r}
+d_i <- function(i) 1:ceil(log(v_i(i)))
+```
+
+Although more sophisticated sampling approaches are definitely possible [@hartmann-02], we will simply generate $100$ graphs for each configuration, and compute their empirical CDF. We can then use that to get percentiles. To make things a bit more efficient, we will pre-generate the edge lists. The simulation code is pasted next, and Figure \@ref(fig:edge-degrees) shows the percentiles of the degree distributions as a function of swarm size, faceted by $d \in \{1, 2, 3, 4\}$.
+
+```{r}
+n_samples <- 500
+```
+
+```{r}
+parameters <- chain(
+  map(0:8, function(i) product(v = v_i(i), d = d_i(i)) |> as.list())) |> 
+    as.list() |>
+    list_c()
+```
+
+```{r cache = TRUE, cache.lazy = FALSE}
+dataset(
+  edge_lists,
+  storage = 'csv.bz2',
+  map(parameters, function(parameter) {
+    parallel::mclapply(
+      1:n_samples,
+      mc.cores = 8, # Works On My Machine (tm)
+      mc.set.seed = TRUE, # make sure to re-seed the forked processes
+      function(i) {
+        swarm_overlay_edgelist(parameter$v, parameter$d) |> mutate(
+          v = parameter$v,
+          d = parameter$d,
+          instance = i
+        )
+      }
+    ) |> bind_rows()
+  }) |> bind_rows()
+)
+```
+
+```{r cache = TRUE, cache.lazy = FALSE}
+dataset(
+  edge_degrees,
+  edge_lists |> 
+    group_by(v, d, instance, to) |> 
+    count(name = 'degree') |>  
+    group_by(v, d) |>
+    reframe(quantile_df(degree, c(0, 0.1, 0.25, 0.50, 0.75, 0.9, 0.95, 1))) |>
+    rename(degree = val)
+)
+```
+
+```{r edge-degrees, fig.cap="Edge degrees distribution percentiles as a function of swarm size, faceted by $d \\in \\{1, 2, 3, 4\\}$."}
+plotly::ggplotly(ggplot(edge_degrees |> filter(d < 5)) +
+  geom_line(aes(x = v, y = degree, col = formatted_factor(quant, function(x) glue('{x*100}')))) +
+  scale_x_log10() +
+  xlab('swarm size') +
+  theme_playax() +
+  labs(colour = "percentile") +
+  facet_grid(cols=vars(d)))
+```
+
+We can make three main conclusions from this:
+
+1. that the median ($50^{th}$ percentile) degree in the graph converges to $d$ and stays constant, regardless of the size of the swarm;
+2. that that the variance increases with $d$, but marginally or not at all with the size of the swarm;
+3. that the maximum degree increases rapidly with $d$.
+
+For completeness, the data is shown in Table \@ref(fig:table-degrees).
+
+```{r table-degrees, fig.cap="Vertex degrees.", echo=FALSE}
+datatable(
+  edge_degrees |> 
+    arrange(v, d, desc(degree)) |>
+    mutate(quant = quant * 100) |>
+    rename(`swarm size` = v, `vertex degree` = degree, percentile = quant),
+  options = list(
+    dom = 'Brtip',
+    columnDefs = list(
+      list(targets = 0, visible = FALSE)
+    )
+  ),
+  filter = list(position = 'top'),
+) |>
+  formatCurrency(c('percentile'), currency = " th", before = FALSE, digits = 0)
+```
+
+
+This is all, to a certain degree, obvious, as the probability that a node gets selected as a neighbor is biased by its swarm lifetime, and points to the need of creating some type of counterweight to reverse that bias. The obvious choice would be to make older nodes less likely to be chosen on bootstrap, but this could make the swarm easy to hijack (think adversary flooding the swarm with new nodes and taking it over).
+
+The less obvious choice would be to have nodes reject neighbor requests once a threshold is met, effectively truncating the tail of the degree distribution. This could make the bootstrap procedure more complex/slower as a node would have to request more nodes from the bootstrap service again. We will keep those in mind for the next iteration.
+
+##  How fast should we expect a block to _percolate_ over the network?
+
+In the absence of a link capacity and/or network delay model, graph topology should dominate dissemination time. The simplest case to analyse is to assume that nodes are able to broadcast the packet to _all of its neighbors_. The main appeal is that this is easy to implement, and can already provide some insight.
+
+```{r disseminate-broadcast}
+```
+
+We will take the overlays we had from before and run a simple experiment where we pick $1, 2, 3$ and $4$ starting nodes chosen at random in the overlays, and compute the average dissemination times for those.
+
+```{r}
+n_sources_max <- 4
+```
+
+```{r eval=FALSE}
+map(parameters[1], function(parameter) {
+  map(1:n_sources_max, function(n_sources) {
+    latencies <- map(1:n_samples, function(instance) {
+      sources <- sample(1:parameter$v, size = n_sources, replace = FALSE)
+      latencies <- edge_lists |> 
+        filter(
+          d == parameter$d,
+          v == parameter$v,
+          instance == !!instance
+        ) |> 
+        as_overlay_graph() |>
+        disseminate_broadcast(sources)
+    }) |> 
+      list_c() |>
+      quantile_df(c(0, 0.1, 0.25, 0.50, 0.75, 0.9, 0.95, 1)) |>
+      mutate(d = parameter$d, v = parameter$v, sources = n_sources)
+  }) |> bind_rows()
+}) |> bind_rows()
+```
+
+# References

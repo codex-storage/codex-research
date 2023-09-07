@@ -1,0 +1,25 @@
+Package: swarm-overlay-sims
+Title: Swarm Overlay Simulations
+Version: 0.0.0.9000
+Description: Simple Simulations for Swarm Overlays
+Encoding: UTF-8
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.2.3
+Depends: 
+  tidyverse (>= 2.0.0),
+  purrr (>= 1.0.1),
+  R6 (>= 2.2.2),
+  igraph (>= 1.5.1),
+  ggraph,
+  glue,
+  itertools,
+  bookdown,
+  Hmisc,
+  playaxr,
+  plotly,
+  DT
+Remotes: gmega/playaxr
+Suggests:
+  devtools,
+  testthat (>= 3.0.0)
+Config/testthat/edition: 3

@@ -1,0 +1,9 @@
+.Rproj.user
+.RData
+.Rhistory
+*.html
+rsconnect
+libs
+data
+*cache
+*files
