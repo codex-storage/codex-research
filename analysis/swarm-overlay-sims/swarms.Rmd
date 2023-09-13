@@ -9,11 +9,30 @@ bibliography: [bibliography.bib]
 link-citations: true
 ---
 
+```{css zoom-lib-src, echo = FALSE}
+script src = "https://ajax.googleapis.com/ajax/libs/jquery/3.4.1/jquery.min.js"
+```
+
+```{js zoom-jquery, echo = FALSE}
+ $(document).ready(function() {
+    $('body').prepend('<div class=\"zoomDiv\"><img src=\"\" class=\"zoomImg\"></div>');
+    // onClick function for all plots (img's)
+    $('img:not(.zoomImg)').click(function() {
+      $('.zoomImg').attr('src', $(this).attr('src')).css({width: '100%'});
+      $('.zoomDiv').css({opacity: '1', width: 'auto', border: '1px solid white', borderRadius: '5px', position: 'fixed', top: '50%', left: '50%', marginRight: '-50%', transform: 'translate(-50%, -50%)', boxShadow: '0px 0px 50px #888888', zIndex: '50', overflow: 'auto', maxHeight: '100%'});
+    });
+    // onClick function for zoomImg
+    $('img.zoomImg').click(function() {
+      $('.zoomDiv').css({opacity: '0', width: '0%'}); 
+    });
+  });
+```
 
 ```{r cache=FALSE, echo=FALSE, warning=FALSE, message=FALSE}
 knitr::read_chunk('R/swarmoverlay.R')
 knitr::read_chunk('R/dissemination.R')
 devtools::load_all()
+knitr::opts_chunk$set(cache = TRUE, warning = FALSE, message = FALSE, cache.lazy = FALSE)
 ```
 
 # Context
@@ -185,38 +204,138 @@ This is all, to a certain degree, obvious, as the probability that a node gets s
 
 The less obvious choice would be to have nodes reject neighbor requests once a threshold is met, effectively truncating the tail of the degree distribution. This could make the bootstrap procedure more complex/slower as a node would have to request more nodes from the bootstrap service again. We will keep those in mind for the next iteration.
 
-##  How fast should we expect a block to _percolate_ over the network?
+## How fast should we expect a block to _percolate_ over the network?
 
 In the absence of a link capacity and/or network delay model, graph topology should dominate dissemination time. The simplest case to analyse is to assume that nodes are able to broadcast the packet to _all of its neighbors_. The main appeal is that this is easy to implement, and can already provide some insight.
 
 ```{r disseminate-broadcast}
 ```
-
+ 
 We will take the overlays we had from before and run a simple experiment where we pick $1, 2, 3$ and $4$ starting nodes chosen at random in the overlays, and compute the average dissemination times for those.
 
 ```{r}
 n_sources_max <- 4
 ```
 
-```{r eval=FALSE}
-map(parameters[1], function(parameter) {
-  map(1:n_sources_max, function(n_sources) {
-    latencies <- map(1:n_samples, function(instance) {
-      sources <- sample(1:parameter$v, size = n_sources, replace = FALSE)
-      latencies <- edge_lists |> 
-        filter(
-          d == parameter$d,
-          v == parameter$v,
-          instance == !!instance
-        ) |> 
-        as_overlay_graph() |>
-        disseminate_broadcast(sources)
-    }) |> 
-      list_c() |>
-      quantile_df(c(0, 0.1, 0.25, 0.50, 0.75, 0.9, 0.95, 1)) |>
-      mutate(d = parameter$d, v = parameter$v, sources = n_sources)
-  }) |> bind_rows()
-}) |> bind_rows()
+```{r cache = TRUE}
+# Pre-generates graphs as otherwise this will murder simulation performance.
+dataset(
+  graphs,
+  storage = 'rds',
+  map(parameters, function(parameter) {
+    pbmclapply(
+      1:n_samples,
+      function(instance) {
+        list(
+          d = parameter$d,
+          v = parameter$v, 
+          instance = instance,
+          g = edge_lists |> 
+            filter(d == parameter$d, v == parameter$v, instance == !!instance) |> 
+            as_overlay_graph()
+        )
+      },
+      mc.cores = 2 # don't go overboard or it will suck up your RAM and crash your machine :-)
+    )
+  }) |> list_c()
+)
 ```
+
+```{r}
+dataset(
+  latency_stats,
+  storage = 'csv',
+  map(parameters, function(parameter) {
+    graph_instances <- graphs |> filter(v == parameter$v & d == parameter$d)
+    map(1:n_sources_max, function(n_sources) {
+      raw_latencies <- map(graph_instances, function(graph) {
+        sources <- sample(1:graph$v, size = n_sources, replace = FALSE)
+        disseminate_broadcast(graph$g, sources)
+      }) |>
+        list_c()
+      
+      raw_latencies |>
+        quantile_df(c(0, 0.1, 0.25, 0.50, 0.75, 0.9, 0.95, 1)) |>
+        rename(stat = quant) |>
+        bind_rows(
+          tibble(
+            stat = c('mean', 'variance', 'sd'),
+            val = mean(raw_latencies), var(raw_latencies), sd(raw_latencies)
+          )
+        ) |>
+        mutate(
+          d = parameter$d,
+          v = parameter$v,
+          sources = n_sources
+        )
+    }) |> bind_rows()
+  }) |> bind_rows()
+)
+```
+
+Fig. \@ref(fig:latencies) shows a grid in which each cell contains a latency $\times$ swarm size (log scale) subplot filtered by a combination of latency percentile (columns) and initial bootstrap degree, or $d$ (rows). This means that at cell `percentile: 0.5` $\times$ `d: 2` we should see the median ($50^{th}$ percentile) latencies for swarms with bootstrap degree $d = 2$. Lines are then coloured based on the number of cache nodes present in the swarm ($1$, $2$, $3$, or $4$). 
+
+With that in mind, what we see is that:
+
+1. dissemination times appear to increase logarithmically with swarm size at all percentiles, as evidenced by the straight lines in the log plots;
+2. increasing $d$ changes the slope of that increase (base of the log), with the most visibly dramatic change happening from $d = 1$ to $d = 2$. In particular, latencies stay below $10$ hops for all swarm sizes once $d \geq 2$, and the median latency is below $5$ hops;
+3. adding cache nodes appears to shift the intercept of the curve, even when considering a very small amount of nodes.
+
+```{r latencies, fig.width = 15, fig.height = 12, fig.cap="**(click to zoom)** Latency percentiles as a function of swarm size and bootstrap degree (d)."}
+ggplot(latency_stats |> rename(percentile = quant)) + 
+  geom_hline(yintercept = 5, lty = 2, col = 'orange') + 
+  geom_line(aes(x = v, y = val, col = as.factor(sources)), lwd = 1.1) +
+  facet_grid(d  ~ percentile, labeller = label_both) +
+  xlab("swarm size (log)") + 
+  ylab("latency (hops)") +
+  theme_playax() +
+  theme(legend.position = "bottom") + 
+  labs(col = 'cache nodes') +
+  scale_x_log10() +
+  big_fonts(15)
+```
+
+Assuming a small block size and an RTT of $s$, this would mean a propagation time proportional to $5 \times s$ for a single block in the absence of congested links. Finally, we see that this loosely tracks the shape of the curves for the diameters of graphs of a given size (\@ref(fig:diameters)), which is unsurprising.
+
+```{r}
+dataset(
+  graph_diameters,
+  storage = 'csv',
+  map(graphs, function(graph) 
+    tibble(d = graph$d, 
+           v = graph$v, 
+           instance = graph$instance, 
+           diameter = diameter(graph$g))
+    ) |>
+    bind_rows()
+)
+```
+
+```{r diameters, fig.width = 10, fig.height = 4, fig.cap = "Swarm diameter percentiles as a function of their size."}
+ggplot(
+  graph_diameters |> group_by(d, v) |> reframe(quantile_df(diameter, probs = c(0, 0.1, 0.25, 0.50, 0.75, 0.9, 0.95, 1)))
+) +
+  geom_line(aes(x = v, y = val, col = as.factor(d))) +
+  facet_grid(.~quant) + 
+  xlab("swarm size (log)") +
+  ylab("diameter") +
+  scale_x_log10() + 
+  theme_playax() +
+  theme(legend.position = 'bottom') + 
+  labs(col = 'bootstrap degree (d)')
+```
+
+# Next Steps
+
+There are a few things that we could do next:
+
+1. tweak the bootstrap protocol so that it mitigates swarm age bias -- where older nodes get selected more often as neighbors as part of the bootstrap procedure -- thus reducing degree imbalances. This involves adding some intelligence to the DHT tracker so that it biases samples towards nodes that have been sampled less;
+2. run simulations with more realistic proportions of cache nodes. We constrained this to $1--4$ for efficiency and to get results out faster, but having swarm percentages may yield more interesting numbers;
+3. add more sophisticated network dynamics (e.g. churn, link delays + multi-block simulations) to have more accurate estimates of performance and load.
+
+Other issues potentially worth exploring:
+
+1. performance of compressed bitsets vs. other set reconciliation data structures like inverted Bloom filters;
+2. techniques for achieving Byzantine fault tolerance on random overlays.
 
 # References

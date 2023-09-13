@@ -17,7 +17,8 @@ Depends:
   Hmisc,
   playaxr,
   plotly,
-  DT
+  DT,
+  pbmcapply
 Remotes: gmega/playaxr
 Suggests:
   devtools,
