@@ -225,13 +225,14 @@ size 2^24, we could support slot sizes up to 1TB:
 
 We are however unaware of any implementations of reed solomon that use a field
 size larger than 2^16 and still be efficient O(N log(N)). [FastECC][2] uses a
-prime field of 20 bits, but it lacks a decoder and a byte encoding scheme. The
-paper ["An Efficient (n,k) Information Dispersal Algorithm Based on Fermat
-Number Transforms"][3] describes a scheme that uses Proth fields of 2^30, but
-lacks an implementation.
+prime field of 20 bits, but its decoder isn't released yet, and it is unclear
+whether its byte encoding scheme allows for a systematic erasure code. The paper
+["An Efficient (n,k) Information Dispersal Algorithm Based on Fermat Number
+Transforms"][3] describes a scheme that uses Proth fields of 2^30, but lacks an
+implementation, and has the same encoding challenges that FastECC has.
 
 If we were to adopt an erasure coding scheme with a large field, it is likely
-that we'll have implement one.
+that we'll either have to modify Leopard or FastECC, or implement one ourselves.
 
 Conclusion
 ----------
