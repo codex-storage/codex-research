@@ -82,7 +82,7 @@ sampling parity data from that polynomial.
 
 
 This only works for small amounts of data. When the polynomial is for instance
-defined over byte sized elements from a Galios field of 2^8, you can only encode
+defined over byte sized elements from a Galois field of 2^8, you can only encode
 2^8 = 256 bytes (data and parity combined).
 
 Interleaving
