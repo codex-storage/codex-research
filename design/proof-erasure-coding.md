@@ -89,10 +89,10 @@ Interleaving
 ------------
 
 To encode larger pieces of data with erasure coding, interleaving is used. This
-works by taking larger blocks of data, and encoding smaller elements from these
-blocks.
+works by taking larger shards of data, and encoding smaller elements from these
+shards.
 
-    data blocks
+    data shards
 
     -------------    -------------    -------------    -------------
     |x| | | | | |    |x| | | | | |    |x| | | | | |    |x| | | | | |
@@ -116,9 +116,11 @@ blocks.
     |p| | | | | |    |p| | | | | |    |p| | | | | |    |p| | | | | |
     -------------    -------------    -------------    -------------
 
-    parity blocks
+    parity shards
 
-This is repeated for each element inside the blocks.
+This is repeated for each element inside the shards. In this manner, we can
+employ erasure coding on a Galois field of 2^8 to encode 256 shards of data, no
+matter how big the shards are.
 
 Adversarial erasure
 -------------------
@@ -127,8 +129,8 @@ The disadvantage of interleaving is that it weakens the protection against
 adversarial erasure that Reed-Solomon provides.
 
 An adversary can now strategically remove only the first element from more than
-half of the blocks, and the dataset will be damaged beyond repair. For example,
-with a dataset of 1TB erasure coded into 256 data and parity blocks, an
+half of the shards, and the dataset will be damaged beyond repair. For example,
+with a dataset of 1TB erasure coded into 256 data and parity shards, an
 adversary could strategically remove 129 bytes, and the data can no longer be
 fully recovered.
 
@@ -136,21 +138,22 @@ Implications for storage proofs
 -------------------------------
 
 This means that when we check for missing data, we should perform our checks on
-entire blocks to protect against adversarial erasure. In the case of our Merkle
-storage proofs, this means that we need to hash the entire block, and then check
-that hash with a Merkle proof. This is rather unfortunate, because hashing large
-amounts of data is rather expensive to perform in a SNARK, which is what we use
-to compress proofs in size.
+entire shards to protect against adversarial erasure. In the case of our Merkle
+storage proofs, this means that we need to hash the entire shard, and then check
+that hash with a Merkle proof. Effectively the block size for merkle proofs
+should equal the shard size of the erasure coding interleaving. This is rather
+unfortunate, because hashing large amounts of data is rather expensive to
+perform in a SNARK, which is what we use to compress proofs in size.
 
 A large amount of input data in a SNARK leads to a larger circuit, and to more
 iterations of the hashing algorithm, which also leads to a larger circuit. A
 larger circuit means longer computation and higher memory consumption.
 
 Ideally, we'd like to have small blocks to keep Merkle proofs inside SNARKs
-relatively performant, but we are limited by the maximum amount of blocks that a
+relatively performant, but we are limited by the maximum amount of shards that a
 particular Reed-Solomon algorithm supports. For instance, the [leopard][1]
-library can create at most 65536 blocks, because it uses a Galois field of 2^16.
-Should we use this to encode a 1TB file, we'd end up with blocks of 16MB, far
+library can create at most 65536 shards, because it uses a Galois field of 2^16.
+Should we use this to encode a 1TB file, we'd end up with shards of 16MB, far
 too large to be practical in a SNARK.
 
 Design space
@@ -158,7 +161,7 @@ Design space
 
 This limits the choices that we can make. The limiting factors seem to be:
 
-- Maximum number of blocks, determined by the field size of the erasure coding
+- Maximum number of shards, determined by the field size of the erasure coding
   algorithm
 - Number of blocks per proof, which determines how likely we are to detect
   missing blocks
@@ -167,7 +170,7 @@ This limits the choices that we can make. The limiting factors seem to be:
 
 From these limiting factors we can derive:
 
-- Block size
+- Block size; equals shard size
 - Maximum slot size; the maximum amount of data that can be verified with a
   proof
 - Erasure coding memory requirements
