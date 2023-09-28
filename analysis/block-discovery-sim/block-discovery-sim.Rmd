@@ -1,0 +1,202 @@
+---
+title: "Block Discovery Sim"
+output: html_document
+runtime: shiny
+
+# rsconnect uses this
+resource_files:
+- R/node.R
+- R/partition.R
+- R/sim.R
+- R/stats.R
+---
+
+## Goal
+
+The goal of this experiment is to understand -- under different assumptions about how blocks are partitioned among nodes -- how long a hypothetical downloader would take to discover enough blocks to make a successful download from storage nodes by randomly sampling the swarm. We therefore do not account for download times or network latency - we just measure how many times the node randomly samples the swarm before figuring out where enough of the blocks are.
+
+```{r echo = FALSE, message = FALSE}
+library(shiny)
+library(plotly)
+
+source('R/collate.R')
+
+knitr::opts_chunk$set(echo = FALSE, message = FALSE)
+```
+
+```{r}
+runs <- 10
+max_steps <- Inf
+```
+
+```{r}
+DISTRIBUTIONS <- list(
+  'uniform' = runif,
+  'exponential' = rexp,
+  'pareto' = VGAM::rparetoI
+)
+```
+
+
+## Network
+
+* Select the parameters of the network you would like to use in the experiments. 
+* Preview the shape of the partitions by looking at the chart.
+* Generate more random partitions by clicking "Generate Another".
+
+```{r}
+fluidPage(
+  sidebarPanel(
+    numericInput(
+      'swarm_size', 
+      label = 'size of the swarm', 
+      value = 20, 
+      min = 1, 
+      max = 10000
+    ),
+    numericInput(
+      'file_size',
+      label = 'number of blocks in the file',
+      value = 1000, 
+      min = 1,
+      max = 1e6
+    ),
+    selectInput(
+      'partition_distribution',
+      label = 'shape of the distribution for the partitions',
+      choices = names(DISTRIBUTIONS)
+    ),
+    actionButton(
+      'generate_network',
+      label = 'Generate Another'
+    )
+  ),
+  mainPanel(
+    plotOutput('network_sample')
+  )
+)
+```
+
+```{r}
+observe({
+  input$generate_network
+  output$network_sample <- renderPlot({
+    purrr::map_dfr(
+      generate_network(
+        number_of_blocks = input$file_size, 
+        network_size = input$swarm_size, 
+        partition_distribution = input$partition_distribution
+      ), 
+      function(node) tibble(node_id = node$node_id, blocks = length(node$storage))
+    ) %>%
+      ggplot() + 
+        geom_bar(
+          aes(x = node_id, y = blocks), 
+          stat = 'identity', 
+          col = 'black', 
+          fill = 'lightgray'
+        ) +
+        labs(x = 'node') + 
+        theme_minimal()
+  })}
+)
+```
+
+## Experiment
+
+Select the number of experiment runs. Each experiment will generate a network and then simulate a download operation where a hypothetical node:
+
+1. joins the swarm;
+2. samples one neighbor per round in a round-based download protocol and asks for its block list.
+
+The experiment ends when the downloading node recovers "enough" blocks. If we let the total number of blocks in the file be $n$ and the coding rate $r$, then the simulation ends when the set of blocks $D$ discovered by the downloading node satisfies $\left|D\right| \geq n\times r$.
+
+We then show a "discovery curve": a curve that emerges as we look at the percentage of blocks the downloader has discovered so far as a function of the number of contacts it made. 
+
+The curve is actually an average of all experiments, meaning that a point $(5, 10\%)$ should be interpreted as: "on average, after $5$ contacts, a downloader will have discovered $10\%$ of the blocks it needs to get a successful download". We show the $5^{th}$ percentile and the $95^{th}$ percentiles of the experiments as error bands around the average.
+
+```{r}
+fluidPage(
+    fluidRow(
+      class='well',
+      column(
+        width = 6, 
+        sliderInput('runs', 'How many experiments to run', min = 10, max = 10000, value = 10),
+        actionButton('do_run', 'Run')
+      ),
+      column(
+        width = 6, 
+        numericInput('coding_rate', 'Coding rate (percentage of blocks required for a successful download)', 
+                     min = 0.1, max = 1.0, step = 0.05, value = 0.5)
+      )
+    )
+)
+```
+
+```{r}
+experiment_results <- reactive({
+  lapply(1:input$runs, function(i) {
+    generate_network(
+      number_of_blocks = input$file_size, 
+      network_size = input$swarm_size, 
+      partition_distribution = input$partition_distribution
+    ) |> run_experiment(run_id = i, coding_rate = input$coding_rate)
+  })
+}) |> bindEvent(
+  input$do_run,
+  ignoreNULL = TRUE,
+  ignoreInit = TRUE
+)
+```
+
+```{r}
+renderPlotly({
+  plot_results(do.call(rbind, experiment_results())) 
+})
+```
+
+```{r}
+generate_network <- function(number_of_blocks, network_size, partition_distribution) {
+  block_array <- sample(1:number_of_blocks, replace = FALSE)
+  
+  partitions <- partition(block_array, network_size, DISTRIBUTIONS[[partition_distribution]])
+  sapply(1:network_size, function(i) Node$new(
+    node_id = i, 
+    storage = partitions[[i]])
+  )
+}
+```
+
+```{r}
+run_experiment <- function(network, coding_rate, run_id = 0) {
+  run_download_simulation(
+    swarm = network,
+    coding_rate = coding_rate,
+    max_steps = max_steps
+  ) |> mutate(
+    run = run_id
+  )
+}
+```
+
+```{r}
+plot_results <- function(results) {
+  stats <- results |>
+    mutate(completion = pmin(1.0, completed_blocks / required_blocks)) |>
+    group_by(step) |>
+    summarise(
+      average = mean(completion),
+      p_95 = quantile(completion, 0.95), 
+      p_05 = quantile(completion, 0.05),
+      .groups = 'drop'
+    )
+
+  plotly::ggplotly(ggplot(stats, aes(x = step)) +
+    geom_line(aes(y = average), col = 'black', lwd = 1) + 
+    geom_ribbon(aes(ymin = p_05, ymax = p_95), fill = 'grey80', alpha = 0.5) +
+    labs(x = 'contacts',  y = 'blocks discovered (%)') +
+    scale_y_continuous(labels = scales::percent_format()) + 
+    theme_minimal())
+}
+```
+
