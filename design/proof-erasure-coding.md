@@ -1,6 +1,8 @@
 Storage proofs & erasure coding
 ===============================
 
+Authors: Codex Team
+
 Erasure coding is used for multiple purposes in Codex:
 
 - To restore data when a host drops from the network; other hosts can restore
@@ -122,6 +124,9 @@ This is repeated for each element inside the shards. In this manner, we can
 employ erasure coding on a Galois field of 2^8 to encode 256 shards of data, no
 matter how big the shards are.
 
+The amount of original data shards is typically called K, the amount of parity
+shards M, and the total amount of shards N.
+
 Adversarial erasure
 -------------------
 
@@ -140,7 +145,7 @@ Implications for storage proofs
 This means that when we check for missing data, we should perform our checks on
 entire shards to protect against adversarial erasure. In the case of our Merkle
 storage proofs, this means that we need to hash the entire shard, and then check
-that hash with a Merkle proof. Effectively the block size for merkle proofs
+that hash with a Merkle proof. Effectively the block size for Merkle proofs
 should equal the shard size of the erasure coding interleaving. This is rather
 unfortunate, because hashing large amounts of data is rather expensive to
 perform in a SNARK, which is what we use to compress proofs in size.
@@ -234,13 +239,179 @@ implementation, and has the same encoding challenges that FastECC has.
 If we were to adopt an erasure coding scheme with a large field, it is likely
 that we'll either have to modify Leopard or FastECC, or implement one ourselves.
 
+More dimensions
+---------------
+
+Another thing that we could do is to keep using existing erasure coding
+implementations, but perform erasure coding in more than one dimension. For
+instance with two dimensions you would encode first in rows, and then in
+columns:
+
+      original data                        row parity
+
+    ---------------------------------    -------------
+    |///|///|///|///|///|///|///|///| -> | p | p | p |
+    ---------------------------------    -------------
+    |///|///|///|///|///|///|///|///| -> | p | p | p |
+    ---------------------------------    -------------
+    |///|///|///|///|///|///|///|///| -> | p | p | p |
+    ---------------------------------    -------------
+    |///|///|///|///|///|///|///|///| -> | p | p | p |
+    ---------------------------------    -------------
+    |///|///|///|///|///|///|///|///| -> | p | p | p |
+    ---------------------------------    -------------
+    |///|///|///|///|///|///|///|///| -> | p | p | p |
+    ---------------------------------    -------------
+    |///|///|///|///|///|///|///|///| -> | p | p | p |
+    ---------------------------------    -------------
+    |///|///|///|///|///|///|///|///| -> | p | p | p |
+    ---------------------------------    -------------
+      |   |   |   |   |   |   |   |        |   |   |
+      v   v   v   v   v   v   v   v        v   v   v
+    ---------------------------------    -------------
+    | p | p | p | p | p | p | p | p |    | p | p | p |
+    ---------------------------------    -------------
+    | p | p | p | p | p | p | p | p |    | p | p | p |
+    ---------------------------------    -------------
+    | p | p | p | p | p | p | p | p |    | p | p | p |
+    ---------------------------------    -------------
+
+                        column parity
+
+This allows us to use the maximum amount of shards for our rows, and the maximum
+amount of shards for our columns. When we erasure code using a Galois field of
+2^16 in a two-dimensional structure, we can now have a maximum of 2^16 x 2^16 =
+2^32 shards. Or we could go up another two dimensions and have a maximum of 2^64
+shards in a four-dimensional structure.
+
+> Note that although we now have multiple dimensions of erasure coding, we do
+> not need multiple dimensions of Merkle trees. We can simply unfold the
+> multi-dimensional structure into a one-dimensional one (like you would do when
+> writing the structure to disk), and then construct a Merkle tree on top of
+> that.
+
+There are however a number of drawbacks to adding more dimensions.
+
+##### Data corrupted sooner #####
+
+In a one-dimensional scheme, corrupting an amount of shards just larger than the
+amount of parity shards ( M + 1 ) will render data lost:
+
+
+                                 <--------- missing: M + 1---------------->
+    ---------------------------------     ---------------------------------
+    |///|///|///|///|///|///|///|   |     |   |   |   |   |   |   |   |   |
+    ---------------------------------     ---------------------------------
+    <-------- original: K ---------->     <-------- parity: M ------------>
+
+In a two-dimensional scheme, we only need to lose an amount much smaller than
+the total amount of parity before data is lost:
+
+
+    <-------- original: K ---------->   <- parity: M ->
+
+    ---------------------------------    -------------   ^
+    |///|///|///|///|///|///|///|///|    |///|///|///|   |
+    ---------------------------------    -------------   |
+    |///|///|///|///|///|///|///|///|    |///|///|///|   |
+    ---------------------------------    -------------   |
+    |///|///|///|///|///|///|///|///|    |///|///|///|   |
+    ---------------------------------    -------------   |
+    |///|///|///|///|///|///|///|///|    |///|///|///|   |
+    ---------------------------------    -------------
+    |///|///|///|///|///|///|///|///|    |///|///|///|   K
+    ---------------------------------    -------------
+    |///|///|///|///|///|///|///|///|    |///|///|///|   |
+    ---------------------------------    -------------   |
+    |///|///|///|///|///|///|///|///|    |///|///|///|   |
+    ---------------------------------    -------------   |    ^
+    |///|///|///|///|///|///|///|   |    |   |   |   |   |    |
+    ---------------------------------    -------------   v    |
+
+    ---------------------------------    -------------   ^    M
+    |///|///|///|///|///|///|///|   |    |   |   |   |   |    +
+    ---------------------------------    -------------        1
+    |///|///|///|///|///|///|///|   |    |   |   |   |   M
+    ---------------------------------    -------------        |
+    |///|///|///|///|///|///|///|   |    |   |   |   |   |    |
+    ---------------------------------    -------------   v    v
+
+                                <-- missing: M + 1 -->
+
+This is only (M + 1)² shards from a total of N² blocks. This gets worse when you
+go to three, four or higher dimensions. This means that our chances of detecting
+whether the data is corrupted beyond repair go down, which means that we need to
+check more shards in our Merkle storage proofs. This is exacerbated by the the
+need to counter parity blowup.
+
+##### Parity blowup ######
+
+When we perform a regular one-dimensional erasure coding, we like to use a ratio
+of 1:2 between original data (K) and total data (N), because it gives us a >50%
+chance of detecting critical data loss by checking a single shard. If we were to
+use the same K and M in a 2-dimensional setting, we'd get a ratio of 1:4 between
+original data and total data. In other words, we would blow up the original data
+by a factor of 4. This gets worse with higher dimensions.
+
+To counter this blow-up, we can choose an M that is smaller. For two dimensions,
+we could chose M = N / √2. This ensures that the total amount of data N² is
+double that of the original data K². For three dimensions we'd choose K / ∛2,
+etc. This however means that the chances of detecting critical data loss in a
+row or column go down, which means that we'd again have to sample more shards in
+our Merkle storage proofs.
+
+##### Larger encoding times #####
+
+Another drawback of multi-dimensional erasure coding is that we now need to
+erasure code the original data multiple times, and we also need to erasure code
+some of the parity data. For a two-dimensional code this means that encoding
+times go up by a factor of at least 2, and for a three-dimensional a factor of
+at least 3, etc.
+
+##### Complexity #####
+
+The final drawback of multi-dimensional erasure coding is its complexity. It is
+harder to reason about its correctness, and implementations must take great care
+to ensure that cornercases when the data is not exactly K² shaped (or K³, or...)
+are handled correctly. Decoding is also more involved because it might require
+restoring parity data before it is possible to restore the original data.
+
+##### The good news ####
+
+Despite these drawbacks, the multi-dimensional approach allows us to make the
+shards almost arbitrarily small. This allows us to compensate for the need to
+sample more shards in our Merkle proofs. For example, using a 2 dimensional
+structure of erasure coded shards in a Galois field of 2^16, we can handle 1TB
+of data with shards of size 256 bytes. When we allow parity data to take up to
+half of the total data, we would need to sample 160 shards to have a 0.999999
+chance of detecting critical data loss. This is much more than the amount of
+shards that we need in a one-dimensional setting, but the shards are much
+smaller. This leads to less hashing in a SNARK, just 40 KB.
+
+> The numbers for multi-dimensional erasure coding schemes can be found in the
+> [accompanying spreadsheet][4]
+
 Conclusion
 ----------
 
 It is likely that with the current state of the art in SNARK design and erasure
-coding implementations we can only support slot sizes up to 4GB. The most
-promising way to increase the supported slot sizes seems to be to implement an
-erasure coding algorithm using a field size of around 2^24.
+coding implementations we can only support slot sizes up to 4GB. There are two
+design directions that allow an increase of slot size. One is to extend or
+implement an erasure coding implementation to use a larger field size. The other
+is to use existing erasure coding implementation in a multi-dimensional setting.
+
+Two concrete options are:
+
+1. Erasure code with a field size that allows for 2^28 shards. Check 20 shards
+   per proof. For 1TB this leads to shards of 4KB. This means the SNARK needs to
+   hash 80KB plus the Merkle paths for a storage proof. Requires custom
+   implementation of Reed-Solomon, and requires at least 1 GB of memory while
+   performing erasure coding.
+2. Erasure code with a field size of 2^16 in two dimensions. Check 160 shards
+   per proof. For 1TB this leads to a shards of 256 bytes. This means that the
+   SNARK needs to hash 40KB plus the Merkle paths for a storage proof. We can
+   use the leopard library for erasure coding and keep memory requirements for
+   erasure coding to a negligable level.
 
 [1]: https://github.com/catid/leopard
 [2]: https://github.com/Bulat-Ziganshin/FastECC
