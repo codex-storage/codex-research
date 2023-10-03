@@ -394,10 +394,17 @@ of data with shards of size 256 bytes. When we allow parity data to take up to
 half of the total data, we would need to sample 160 shards to have a 0.999999
 chance of detecting incomplete slot data. This is much more than the number of
 shards that we need in a one-dimensional setting, but the shards are much
-smaller. This leads to less hashing in a SNARK, just 40 KB.
+smaller. This leads to less hashing of shards in a SNARK, just 40 KB.
+
+Unfortunately, this approach requires us to process more and longer Merkle
+paths. For our example, this means an additional 160 KB of hashing, leading to a
+total of 200KB of hashing insize a SNARK.
 
 > The numbers for multi-dimensional erasure coding schemes can be found in the
 > [accompanying spreadsheet][4]
+
+> [Sparse Merkle multiproofs and pollarding][5] may help to reduce the amount
+> of hashing further.
 
 Conclusion
 ----------
@@ -412,17 +419,18 @@ Two concrete options are:
 
 1. Erasure code with a field size that allows for 2^28 shards. Check 20 shards
    per proof. For 1TB this leads to shards of 4KB. This means the SNARK needs to
-   hash 80KB plus the Merkle paths for a storage proof. Requires custom
-   implementation of Reed-Solomon, and requires at least 1 GB of memory while
-   performing erasure coding.
+   hash 97.5KB (80KB of shards + 17.5KB of Merkle paths) for a storage proof.
+   Requires custom implementation of Reed-Solomon, and requires at least 1 GB of
+   memory while performing erasure coding.
 2. Erasure code with a field size of 2^16 in two dimensions. Check 160 shards
    per proof. For 1TB this leads to a shards of 256 bytes. This means that the
-   SNARK needs to hash 40KB plus the Merkle paths for a storage proof. We can
-   use the leopard library for erasure coding and keep memory requirements for
-   erasure coding to a negligable level.
+   SNARK needs to hash 200KB (40KB of shards + 160KB for Merkle paths) for a
+   storage proof. We can use the leopard library for erasure coding and keep
+   memory requirements for erasure coding to a negligable level.
 
 [0]: ./marketplace.md
 [1]: https://github.com/catid/leopard
 [2]: https://github.com/Bulat-Ziganshin/FastECC
 [3]: https://ieeexplore.ieee.org/abstract/document/6545355
 [4]: ./proof-erasure-coding.ods
+[5]: https://www.wealdtech.com/articles/understanding-sparse-merkle-multiproofs/
