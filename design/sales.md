@@ -161,7 +161,7 @@ from entering the queue.
 
 ### Removing slots from the queue
 
-Hosts will also recieve contract events for when any contract is started,
+Hosts will also receive contract events for when any contract is started,
 failed, or cancelled. In all of these cases, slots in the queue pertaining to
 these requests should be removed as they are no longer fillable by the host.
 Note: expired request slots will be checked when a request is processed and its
@@ -197,7 +197,7 @@ As soon as items are available in the queue, and there are workers available for
 processing, an item is popped from the queue and processed.
 
 When a slot is processed, it is first checked to ensure there is a matching
-availabilty, as these availabilities will have changed over time. Then, the
+availability, as these availabilities will have changed over time. Then, the
 sales process will begin. The start of the sales process should ensure that the
 slot being processed is indeed available (slot state is "free") before
 continuing. If it is not available, the sales process will exit and the host

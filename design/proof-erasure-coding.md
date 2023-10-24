@@ -18,7 +18,7 @@ called a 'slot'][0], so we'll refer to the piece that a single hosts stores as
 its 'slot data'.
 
 In the rest of this document we will ignore these two first purposes and dive
-deeper into the third purpose; increasing the probabily of finding missing slot
+deeper into the third purpose; increasing the probability of finding missing slot
 data on a host. For this reason we introduce a secondary erasure coding scheme
 that makes it easier to detect missing or corrupted slot data on a host through
 storage proofs.
@@ -426,7 +426,7 @@ Two concrete options are:
    per proof. For 1TB this leads to a shards of 256 bytes. This means that the
    SNARK needs to hash 200KB (40KB of shards + 160KB for Merkle paths) for a
    storage proof. We can use the leopard library for erasure coding and keep
-   memory requirements for erasure coding to a negligable level.
+   memory requirements for erasure coding to a negligible level.
 
 [0]: ./marketplace.md
 [1]: https://github.com/catid/leopard

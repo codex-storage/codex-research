@@ -56,7 +56,7 @@ including a small amount of host losses that can be tolerated.
 
       cid                             # content identifier
 
-      reward                          # tokens payed per second per filled slot
+      reward                          # tokens paid per second per filled slot
       collateral                      # amount of collateral required per host and slot
 
       proof probability               # frequency at which proofs are required
