@@ -144,7 +144,7 @@ The client is able to retrieve any funds that are left in the Request.
         |
         v
     -----------       timeout       -------------
-    | created | ------------------> | cancelled |
+    |   new   | ------------------> | cancelled |
     -----------                     -------------
         |
         | all slots filled
@@ -157,17 +157,17 @@ The client is able to retrieve any funds that are left in the Request.
         | money runs out
         |
         v
-    ---------
-    | ended |
-    ---------
+    ------------
+    | finished |
+    ------------
 
 
 Repairs
 -------
 
-When a slot is freed because of missing too many storage proofs, some 
+When a slot is freed because of missing too many storage proofs, some
 collateral from the host that previously filled the slot is used as an incentive
-to repair the lost content. Repair typically involves downloading other parts of 
+to repair the lost content. Repair typically involves downloading other parts of
 the content and using erasure coding to restore the missing parts. To incentive
 other nodes to do this repair, there is repair fee. It is a partial amount of the original
 host's collateral. The size of the reward is a fraction of slot's collateral
@@ -216,7 +216,7 @@ When too many nodes compete for a slot in a Request, and only one is selected,
 then this leads to wasted resources in the network. Wasted resources ultimately
 lead to a higher cost of storage.
 
-To alleviate these problems, we introduce a dispersal parameter in the Request. 
+To alleviate these problems, we introduce a dispersal parameter in the Request.
 The dispersal parameter allows a client to choose the amount of
 spreading within the network. When a slot becomes empty then only a small amount
 of hosts in the network are allowed to fill the slot. Over time, more and more
