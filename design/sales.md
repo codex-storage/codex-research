@@ -174,6 +174,7 @@ Slots in the queue should be sorted in the following order:
 2. Collateral required (ascending)
 3. Time before expiry (descending)
 4. Dataset size (ascending)
+5. Seen flag
 
 <sup>1</sup> While profit cannot yet be calculated correctly as this calculation will
   involve bandwidth incentives, profit can be estimated as `duration * reward`
@@ -207,6 +208,27 @@ the [sliding window
 mechanism](https://github.com/codex-storage/codex-research/blob/master/design/marketplace.md#dispersal).
 If the host is not allowed to fill the slot, the sales process will exit and the
 host will process the top slot in the queue.
+
+#### Preventing continual processing when there are small availabilities
+If the processed slot cannot continue because there are no availabilities, the
+slot should be marked as `seen` and put back into the queue. This flag will
+cause the slot to be ordered lower in the heap queue. If, upon processing
+a slot, the slot item already has a `seen` flag set, the queue should be
+paused.
+
+This serves to prevent availabilities that are small (in avaialble bytes) from
+emptying the queue.
+
+#### Pausing the queue
+When availabilities are modified or removed, and there are no availabilities
+left, the queue should be paused.
+
+A paused queue will wait until it is unpaused before continuing to process items
+in the queue. This prevents unnecessarily popping items off the queue.
+
+#### Unpausing the queue
+When availabilities are modified or added, the queue should be unpaused if it
+was paused and any slots in the queue should have their `seen` flag cleared.
 
 #### Queue workers
 Each time an item in the queue is processed, it is assigned to a workers. The
