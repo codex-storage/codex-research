@@ -26,7 +26,7 @@ The hash function `H` can also have different types `S` of inputs. For example:
 - A naive Merkle tree implementation could for example accept only a power-of-two 
   sized sequence of `T`
 
-Notation: Let's denote a sequence of `T` by `[T]`.
+Notation: Let's denote a sequence of `T`-s by `[T]`.
 
 ### Merkle tree API
 
@@ -65,7 +65,7 @@ The compression function could be implemented in several ways:
 When implemented without enough care (like the above naive algorithm), there are several 
 possible attacks producing hash collisions or second preimages:
 
-1. The root of particular any layer is the same as the root of the input
+1. The root of any particular layer is the same as the root of the input
 2. The root of `[x_0,x_1,...,x_(2*k)]` (length is `n=2*k+1` is the same as the root of 
    `[x_0,x_1,...,x_(2*k),dummy]` (length is `n=2*k+2`)
 3. when using bytes as the input, already `deserialize` can have similar collision attacks
@@ -76,10 +76,11 @@ Traditional (linear) hash functions usually solve the analogous problems by clev
 ### Domain separation
 
 It's a good practice in general to ensure that different constructions using the same 
-underlying hash function will never produce the same output. This is called "domain separation",
-and it can very loosely remind one to _multihash_; however instead of adding extra bits of information 
-to a hash (and thus increasing its size), we just compress the extra information into the hash itself.
-So the information itself is lost, however collisions between different domains are prevented.
+underlying hash function will never (or at least with a very high probability not) produce the same output. 
+This is called "domain separation", and it can very loosely remind one to _multihash_; however 
+instead of adding extra bits of information to a hash (and thus increasing its size), we just 
+compress the extra information into the hash itself. So the information itself is lost, 
+however collisions between different domains are prevented.
 
 A simple example would be using `H(dom|H(...))` instead of `H(...)`. The below solutions
 can be interpreted as an application of this idea, where we want to separate the different
@@ -90,9 +91,9 @@ lengths `n`.
 While the third problem (`deserialize` may be not injective) is similar to the second problem,
 let's deal first with the tree problems, and come back to `deserialize` (see below) later.
 
-**Solution 0b.** Pre-hash each input element. This solves 2) and 4) (if we choose `dummy` to be
-something we don't expect anybody to find a preimage), but does not solve 1); also it
-doubles the computation time.
+**Solution 0.** Pre-hash each input element. This solves 1), 2) and also 4) (at least 
+if we choose `dummy` to be something we don't expect anybody to find a preimage), but 
+it doubles the computation time.
 
 **Solution 1.** Just prepend the data with the length `n` of the input sequence. Note that any
 cryptographic hash function needs an output size of at least 160 bits (and usually at least 
@@ -103,17 +104,20 @@ However, a typical application of a Merkle tree is the case where the length of 
 `n=2^d` is a power of two; in this case it looks a little bit "inelegant" to increase the size
 to `n=2^d+1`, though the overhead with above even-odd construction is only `log2(n)`.
 An advantage is that you can _prove_ the size of the input with a standard Merkle inclusion proof.
-Alternative version: append instead of prepend; then the indexing of the leaves does not change.
+
+Alternative version: append the length, instead of prepending; then the indexing of the leaves does not change.
 
 **Solution 2.** Apply an extra compression step at the very end including the length `n`, 
 calculating `newRoot = compress(n,origRoot)`. This again solves all 3 problems. However, it 
-makes the code a bit less regular; and you have to submit the length as part of Merkle proofs.
+makes the code a bit less regular; and you have to submit the length as part of Merkle proofs
+(but it seems hard to avoid that anyway).
 
-**Solution 3a.** Use two different compression function, one for the bottom layer (by bottom
-I mean the closest to the input) and another for all the other layers. For example you can 
-use `compress(x,y) := H(isBottomLayer|x|y)`. This solves problem 1).
+**Solution 3a.** Use two different compression functions, one for the bottom layer (by bottom
+I mean the one next to the input, which is the same as the widest one) and another for all 
+the other layers. For example you can use `compress(x,y) := H(isBottomLayer|x|y)`. 
+This solves problem 1).
 
-**Solution 3b.** Use two different compression function, one for the even nodes, and another
+**Solution 3b.** Use two different compression functions, one for the even nodes, and another
 for the odd nodes (that is, those with a single children instead of two). Similarly to the 
 previous case, you can use for example `compress(x,y) := H(isOddNode|x|y)` (note that for 
 the odd nodes, we will have `y=dummy`). This solves problem 2). Remark: The extra bits of 
@@ -130,7 +134,7 @@ two bits of information to each node (that is, we need 4 different compression f
 both problems again (and 4) too), but doubles the amount of computation.
 
 **Solution 4b.** Only in the bottom layer, use `H(1|isOddNode|i|x_{2i}|x_{2i+1})` for 
-compression (not that for the odd node we have `x_{2i+1}=dummy`). This is similar to 
+compression (note that for the odd node we have `x_{2i+1}=dummy`). This is similar to 
 the previous solution, but does not increase the amount of computation.
 
 **Solution 4c.** Only in the bottom layer, use `H(i|j|x_i|x_j)` for even nodes
@@ -210,7 +214,7 @@ all results in the same output.
 
 #### About padding in general
 
-Let's take a step back, and meditate a little bit of what's the meaning of padding.
+Let's take a step back, and meditate a little bit about the meaning of padding.
 
 What is padding? It's a mapping from a set of sequences into a subset. In our case 
 we have an arbitrary sequence of bytes, and we want to map into the subset of sequences 
@@ -241,8 +245,8 @@ sequences, which always results in a byte sequence whose length is divisible by 
 - or append the length instead of prepending, then pad (note: appending is streaming-friendly; prepending is not)
 - or first pad with zero bytes, but leave 8 bytes for the length (so that when we finally append
   the length, the result will be divisible 31). This is _almost_ exactly what SHA2 does.
-- use the following padding strategy: _always_ add a single `0x01` byte, then enough `0x00` bytes so that the length
-  is divisible by 31. This is usually called the `10*` padding strategy, abusing regexp notation.
+- use the following padding strategy: _always_ add a single `0x01` byte, then enough `0x00` bytes (possibly none)
+  so that the length is divisible by 31. This is usually called the `10*` padding strategy, abusing regexp notation.
   Why does this work? Well, consider an already padded sequence. It's very easy to recover the
   original byte sequence by 1) first removing all trailing zeros; and 2) after that, remove the single
   trailing `0x01` byte. This proves that the padding is an injective function.
@@ -265,10 +269,10 @@ We decided to implement the following version.
   so that the resulting sequence have length divisible by 31
 - when converting an (already padded) byte sequence to a sequence of field elements, 
   split it up into 31 byte chunks, interpret those as little-endian 248-bit unsigned
-  integers, and finally interpret those integers as field elements in the BN254 prime 
-  field (using the standard mapping `Z -> Z/p`).
+  integers, and finally interpret those integers as field elements in the BN254 scalar
+  prime field (using the standard mapping `Z -> Z/r`).
 - when using the Poseidon2 sponge construction to compute a linear hash out of 
-  a sequence of field elements, we use the BN254 field, `t=3` and `(0,0,domsep)` 
+  a sequence of field elements, we use the BN254 scalar field, `t=3` and `(0,0,domsep)` 
   as the initial state, where `domsep := 2^64 + 256*t + rate` is the domain separation
   IV. Note that because `t=3`, we can only have `rate=1` or `rate=2`. We need
   a padding strategy here too (since the input length must be divisible by `rate`):
@@ -286,4 +290,4 @@ We decided to implement the following version.
 - we will use the same strategy when constructing binary Merkle trees with the
   SHA256 hash; in that case, the compression function will be `SHA256(x|y|key)`.
   Note: since SHA256 already uses padding internally, adding the key does not
-  result in any overhoad.
+  result in any overhead.
