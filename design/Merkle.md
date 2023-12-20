@@ -4,6 +4,9 @@ Merkle tree API proposal (WIP draft)
 
 Let's collect the possible problems and solutions with constructing Merkle trees.
 
+See [section "Final proposal"](#Final-proposal) at the bottom for the concrete 
+version we decided to implement.
+
 ### Vocabulary
 
 A Merkle tree, built on a hash function `H`, produces a Merkle root of type `T`. 
@@ -73,9 +76,11 @@ Traditional (linear) hash functions usually solve the analogous problems by clev
 ### Domain separation
 
 It's a good practice in general to ensure that different constructions using the same 
-underlying hash functions will never produce the same output. This is called "domain separation",
-and it's a bit similar to _multihash_; however instead of adding extra bits of information to a hash
-(and thus increasing its size), we just compress the extra information into the hash itself.
+underlying hash function will never produce the same output. This is called "domain separation",
+and it can very loosely remind one to _multihash_; however instead of adding extra bits of information 
+to a hash (and thus increasing its size), we just compress the extra information into the hash itself.
+So the information itself is lost, however collisions between different domains are prevented.
+
 A simple example would be using `H(dom|H(...))` instead of `H(...)`. The below solutions
 can be interpreted as an application of this idea, where we want to separate the different
 lengths `n`.
@@ -135,10 +140,11 @@ a Merkle proof, you still need to know whether the element you prove is the last
 odd element, or not. However instead of submitting the length, you can encode this
 into a single bit (not sure if that's much better though).
 
-**Solution 5 (??).** Use a different tree shape, where the left subtree is always a complete
+**Solution 5.** Use a different tree shape, where the left subtree is always a complete
 (full) binary tree with `2^floor(log2(n-1))` leaves, and the right subtree is
 constructed recursively. Then the shape of tree encodes the number of inputs `n`.
-This however complicates the Merkle proofs (they won't have uniform size).
+Blake3 hash uses such a strategy internally. This however complicates the Merkle proofs 
+(they won't have uniform size anymore).
 TODO: think more about this!
 
 ### Keyed compression functions
@@ -146,17 +152,17 @@ TODO: think more about this!
 How can we have many different compression functions? Consider three case studies:
 
 **Poseidon.** The Poseidon family of hashes is built on a (fixed) permutation 
-`pi : F^t -> F^t`, where `F` is a (large) finite field. For simplicity consider the case `t=3`. 
+`perm : F^t -> F^t`, where `F` is a (large) finite field. For simplicity consider the case `t=3`. 
 The standard compression function is then defined as:
 
-    compress(x,y) := let (u,_,_) = pi(x,y,0) in u
+    compress(x,y) := let (u,_,_) = perm(x,y,0) in u
 
 That, we take the triple `(x,y,0)`, apply the permutation to get another triple `(u,v,w)`, and
 extract the field element `u` (we could use `v` or `w` too, it shouldn't matter).
 Now we can see that it is in fact very easy to generalize this to a _keyed_ (or _indexed_)
 compression function:
 
-    compress_k(x,y) := let (u,_,_) = pi(x,y,k) in u
+    compress_k(x,y) := let (u,_,_) = perm(x,y,k) in u
 
 where `k` is the key. Note that there is no overhead in doing this. And since `F` is pretty
 big (in our case, about 253 bits), there is plenty of information we can encode in the key `k`.
@@ -186,18 +192,9 @@ works perfectly well with no overhead compared to `SHA256(x|y)`.
 **MiMC.** MiMC is another arithmetic construction, however in this
 case the starting point is a _block cipher_, that is, we start with
 a keyed permutation! Unfortunately MiMC-p/p is a (keyed) permutation 
-of `F`, which is not very useful for usl; however in Feistel mode we
+of `F`, which is not very useful for us; however in Feistel mode we
 get a keyed permutation of `F^2`, and we can just take the first
 component of the output of that as the compressed output.
-
-### Tree padding proposal
-
-It seems to me, that whatever way we try to solve problem 2) without pre-hashing, we need
-to include the length (or at least one bit information about the length) into the Merkle
-proofs. So maybe we should just live with that.
-
-Then from the above choices, right now maybe solution **4c**, or some variation of it
-looks the nicest to me.
 
 ### Making `deserialize` injective
 
@@ -211,16 +208,82 @@ Consider the following simple algorithm to deserialize a sequence of bytes into 
 The problem with this, is that for example `0x123456`, `0x12345600` and `0x1234560000` 
 all results in the same output.
 
-Some possible solutions:
+#### About padding in general
+
+Let's take a step back, and meditate a little bit of what's the meaning of padding.
+
+What is padding? It's a mapping from a set of sequences into a subset. In our case 
+we have an arbitrary sequence of bytes, and we want to map into the subset of sequences 
+whose length is divisible by 31.
+
+Why do we want padding? Because we want to apply an algorithm (in this case a hash function) 
+to arbitrary sequences, but the algorithm can only handle a subset of all sequences.
+In our case we first map the arbitrary sequence of bytes into a sequence of bytes
+whose length is divisible by 31, and then map that into a sequence of finite field
+elements.
+
+What properties do we want from padding? Well, that depends on what what properties we 
+want from the resulting algorithm. In this case we do hashing, so we definitely want 
+to avoid collisions. This means that our padding should never map two different input 
+sequences into the same padded sequence (because that would create a trivial collision). 
+In mathematics, we call such functions "injective".
+
+How do you prove that a function is injective? You provide an inverse function, 
+which takes a padded sequences and outputs the original one. 
+
+In summary we need to come up with an injective padding strategy for arbitrary byte 
+sequences, which always results in a byte sequence whose length is divisible by 31.
+
+#### Some possible solutions:
 
 - prepend the length (number of input bytes) to the input, say as a 64-bit little-endian integer (8 bytes),
   before padding as above
-- or append the length instead of prepending, then pad
+- or append the length instead of prepending, then pad (note: appending is streaming-friendly; prepending is not)
 - or first pad with zero bytes, but leave 8 bytes for the length (so that when we finally append
-  the length, the result will be divisible 31).
-- use the following padding strategy: _always_ add a single 0x01 byte, then enough 0x00 bytes so that the length
-  is divisible by 31. Why does this work? Well, consider an already padded sequence. Count
-  the number of zero bytes from the end: you get a number `0 <= m < 31`. This number 
-  determines the residue class of the original length `n` modulo 31; then this class,
-  together with the padded length fully determines the original length. 
+  the length, the result will be divisible 31). This is _almost_ exactly what SHA2 does.
+- use the following padding strategy: _always_ add a single `0x01` byte, then enough `0x00` bytes so that the length
+  is divisible by 31. This is usually called the `10*` padding strategy, abusing regexp notation.
+  Why does this work? Well, consider an already padded sequence. It's very easy to recover the
+  original byte sequence by 1) first removing all trailing zeros; and 2) after that, remove the single
+  trailing `0x01` byte. This proves that the padding is an injective function.
+- one can easily come up with many similar padding strategies. For example SHA3/Keccak uses `10*1` 
+  (but on bits, not bytes), and SHA2 uses a combination of `10*` and appending the bit length of the
+  original input.
 
+Remark: Any safe padding strategy will result in at least one extra field element
+if the input length was already divisible by 31. This is both unavoidable in general,
+and not an issue in practice (as the size of the input grows, the overhead becomes 
+negligible). The same thing happens when you SHA256 hash an integer multiple of 64 bytes.
+
+
+### Final proposal
+
+We decided to implement the following version.
+
+- pad byte sequences (to have length divisible by 31) with the `10*` padding strategy; that is, 
+  always append a single `0x01` byte, and after that add a number of zero bytes (between 0 and 30),
+  so that the resulting sequence have length divisible by 31
+- when converting an (already padded) byte sequence to a sequence of field elements, 
+  split it up into 31 byte chunks, interpret those as little-endian 248-bit unsigned
+  integers, and finally interpret those integers as field elements in the BN254 prime 
+  field (using the standard mapping `Z -> Z/p`).
+- when using the Poseidon2 sponge construction to compute a linear hash out of 
+  a sequence of field elements, we use the BN254 field, `t=3` and `(0,0,domsep)` 
+  as the initial state, where `domsep := 2^64 + 256*t + rate` is the domain separation
+  IV. Note that because `t=3`, we can only have `rate=1` or `rate=2`. We need
+  a padding strategy here too (since the input length must be divisible by `rate`):
+  we use `10*` again, but here on field elements. 
+  Remark: For `rate=1` this makes things always a tiny bit slower, but we plan to use
+  `rate=2` anyway (as it's twice as fast), and it's better not to have exceptional cases.
+- when using Poseidon2 to build a binary Merkle tree, we use "solution #3" from above.
+  That is, we use a keyed compression function, with the key being one of `{0,1,2,3}`
+  (two bits). The lowest bit is 1 in the bottom-most (that is, the widest) layer,
+  and 0 otherwise; the other bit is 1 if it's both the last element of the layer,
+  _and_ it is an odd layer; 0 otherwise. In odd layers, we also add an extra 0 field
+  element to make it even. This is also valid for the singleton input: in that case
+  it's both odd and the bottommost, so the root of a singleton input `[x]` will
+  be `H_{key=3}(x|0)`
+- we will use the same strategy when constructing binary Merkle trees with the
+  SHA256 hash; in that case, the compression function will be `SHA256(x|y|key)`.
+  Note: since SHA256 already uses padding internally, adding the key does not
+  result in any overhoad.
