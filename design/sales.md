@@ -227,10 +227,11 @@ A paused queue will wait until it is unpaused before continuing to process items
 in the queue. This prevents unnecessarily popping items off the queue.
 
 #### Unpausing the queue
-The queue should be unpaused if it was paused and any slots in the queue should
-have their `seen` flag cleared, when:
-1. availabilities are modified or added
-2. slots are pushed to the queue
+When availabilities are modified or added, the queue should be unpaused if it
+was paused and any slots in the queue should have their `seen` flag cleared.
+Additionally, when availabilities are modified or added, the queue should be
+unpaused if itw as paused, however the `seen` flags of existing queue items
+should not be cleared.
 
 #### Queue workers
 Each time an item in the queue is processed, it is assigned to a workers. The
