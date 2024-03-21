@@ -229,9 +229,9 @@ in the queue. This prevents unnecessarily popping items off the queue.
 #### Unpausing the queue
 When availabilities are modified or added, the queue should be unpaused if it
 was paused and any slots in the queue should have their `seen` flag cleared.
-Additionally, when availabilities are modified or added, the queue should be
-unpaused if itw as paused, however the `seen` flags of existing queue items
-should not be cleared.
+Additionally, when slots are pushed to the queue, the queue should be unpaused
+if it was paused, however the `seen` flags of existing queue items should not be
+cleared.
 
 #### Queue workers
 Each time an item in the queue is processed, it is assigned to a workers. The
