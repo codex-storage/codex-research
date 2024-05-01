@@ -332,13 +332,46 @@ become prohibitively expensive on a large scale.
 
 ## Proposed solution #2: slot reservations aka the "bloem method"
 
-A proposed solution to this problem is to limit the number of SPs racing to
-download the data to fill the slot, by allowing SPs to first reserve a slot
-before any data needs to be downloaded. Reserving a slot requires some
-collateral, so there is an initial race for SPs who can can deposit collateral
-first to secure a reservation, then a second race amongst the SPs with a
-reservation to fill the slot (with collateral and the generated proof). However,
-not all SPs in the network can reserve a slot initially: the [expanding window
+Competition between hosts to fill slots has some advantages, such as providing
+an incentive for hosts to become proficient in downloading content and
+generating proofs. It also has some drawbacks, for instance it can lead to
+network inefficiencies because multiple hosts do the work of downloading and
+proving, while only one host is rewarded for it. These inefficiencies lead to
+higher costs for hosts, which leads to an overall increase in the price of
+storage on the network. It can also lead to clients inadvertently inviting too
+much network traffic to themselves. Should they for instance post a very
+lucrative storage request, then this invites a lot of hosts to start downloading
+the content from the client simultaneously, not unlike a DDOS attack.
+
+Slot reservations are a means to avoid these inefficiencies. Before downloading
+the content associated with a slot, a limited number of hosts can reserve the
+slot. Only hosts that have reserved the slot can fill the slot. After the host
+downloads the content and calculates a proof, it can move the slot from its
+reserved state into the filled state by providing collateral and the storage
+proof. Then it begins to periodically provide storage proofs and accrue payments
+for the slot.
+
+```
+         reserve         proof & collateral
+            |                  |
+            v                  v
+            ---------------------------------------------
+     slot:  |/ / / / / / / / / |/////////////////////////
+            ---------------------------------------------
+            |                  |
+            v                  v
+          slot                slot
+         reserved            filled
+
+
+            ---------------- time ---------------->
+```
+
+Reserving a slot requires some collateral, so there is an initial race for SPs
+who can can deposit collateral first to secure a reservation, then a second race
+amongst the SPs with a reservation to fill the slot (with collateral and the
+generated proof). However, not all SPs in the network can reserve a slot
+initially: the [expanding window
 mechanism](https://github.com/status-im/codex-research/blob/ad41558900ff8be91811aa5de355148d8d78404f/design/marketplace.md#dispersal)
 dictates which SPs are eligible to reserve the slot. As time progresses for an
 unreserved slot (or a slot with less than $R$ reservations), more SPs will be
