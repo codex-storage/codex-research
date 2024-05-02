@@ -37,6 +37,10 @@ getting a bigger reward.
 The fill reward curve would be a configuration parameter in the smart contract,
 making it a network-level value, that affects all storage requests.
 
+The source of the fill reward comes from the client's [Pay2Play
+collateral](#pay2play-client-collateral), and therefore fill rewards will not be
+paid until the contract successful starts (all slots are filled).
+
 There is one caveat: the smallest collateral that a client can require must be
 greater than the maximum fill reward. If this was not the case, an SP that is
 actively filling a slot, that sees a more profitable opportunity with a high
@@ -46,9 +50,11 @@ new request. If the collateral for a request is always greater than the largest
 fill reward, then the fill reward will never be an incentive for an SP
 to abandon their existing duties.
 
-// TODO: the maximum fill reward should be less than the smallest allowed
-collateral by some factor. This factor could be a configuration parameter in the
-smart contract. It should also be modeled to understand optimal values.
+#### Possible fill reward:collateral factor?
+
+The maximum fill reward must be less than the smallest allowed collateral by
+some factor. This factor is to be defined a configuration parameter in the smart
+contract at the network-level.
 
 ### Expanding window mechanism
 
@@ -143,13 +149,18 @@ be bounded in such a way that expansion does not accelerate too quickly.
 #### Expanding window time interval
 
 The time interval duration, $t_i$, of the expanding window mechanism should be a
-function of the request expiry and the maximum value of $d_a$. The maximum value
-of $d_a$ should occur at the time interval just before expiry, so that only the
-very last $t_i$ will have all addresses in the network available. This will
-encourage data distribution. The number of eligible addresses at $2*t_i$ before
-expiry will have half of the network addresses. Because $d_a$ is a hash, we can
-assume 256 bits, and therefore the maximum value of $d$ (kademlia distance) is
-`256`.
+function of the request expiry and the maximum value of $d_a$, so that the
+maximum value of $d_a$ occurs at the time interval just before expiry. This
+means that only the very last $t_i$ will have all addresses in the network
+available, thus encouraging data distribution, but mainly discouraging too many
+addresses from being eligible too quickly. Because each time interval is an
+increase in kademlia distance, each time interval will add twice the number of
+eligible addresses as the time interval before it. In other words, the number of
+eligible addresses is cumulative: each increase in time interval / distance will
+add double the eligible addresses that were added in the previous time interval.
+
+Because $d_a$ is a hash, we can assume 256 bits, and therefore the maximum value
+of $d$ (kademlia distance) is `256`.
 
 ```
 ------.------.------.------.------.------> t_elapsed
@@ -171,37 +182,64 @@ $t_i = d_max - 1 / expiry$, eg $t_i = 255/expiry$
 
 The caveat here is that expiry must always be greater than or equal to 255.
 
+### Pay2Play: client collateral
 
-## Pay2Play: client fee for cancelled contracts
+Pay2Play is an *additional* collateral that is deposited by the client when
+creating a request for storage. It is burned if a contract does not start (all
+slots were not filled before expiry). If the contract starts (all slots are
+filled), it is used to pay for the fill reward, with the difference being
+returned once the contract starts.
 
-Pay2Play is a fee that is burned if a contract does not start (all slots were
-not filled before expiry). The source of the burned funds comes from the total
-value put up by the client to pay for SPs to store their data. However, if the
-contract is successfully completed, the fee is not burned and goes toward
-payment of the SP/validator rewards. The sole purpose of the collateral is to
-disincentivize bad behavior, namely, initially withholding data and spam
-prevention. This fee is "pay to play" because the client is taking a risk that
-their request will not complete successfully, however this fee is necessary for
-mitigation of certain attacks.
+The sole purpose of the collateral is to disincentivize bad behavior, namely,
+initially withholding data and spam prevention. This collateral is "pay to play"
+because the client needs to deposit additional collateral just to submit a
+request for storage. They are taking the risk that their request will not
+complete successfully, however this collateral is necessary for mitigation of
+certain attacks.
 
 When a client submits a request for storage, SPs that fill the slots download
 the data from the client. The client could withhold this data to disrupt the
 network and create opportunity loss for SPs that are attempting to download the
 data. If this happens, then the slot would not be filled and the client would
-lose its Pay2Play fee.
+lose its Pay2Play collateral.
 
 A client could also spam the network by submitting many requests for storage
 that have conditions that would likely not be met by any SP's availability.
-Ultimately, SPs would waste resources acting on these requests, however the
+Ultimately, SPs would not waste resources acting on these requests, however the
 requests still need to be processed by the SP, which could, if numerous enough,
-cause unknown issues overloading the SP with requests, and an additional
-opportunity loss associated with processing a high volume of untenable requests.
-While the transaction cost alone could be a deterrent for this type of behavior,
-once deployed on an L2, spamming the network in this way would be achievable.
-The Pay2Play fee adds to the expense of such spam and would further
-disincentivize this behavior.
+cause unknown issues overloading the SP with requests, unknown issues
+overloading the network, and create opportunity loss associated with processing
+a high volume of untenable requests. While the transaction cost alone could be a
+deterrent for this type of behavior, once deployed on an L2, spamming the
+network in this way would be achievable. The Pay2Play collateral adds to the
+expense of such spam and would further disincentivize this behavior.
 
-### Pay2Play fee as a value
+#### How much should the Pay2Play collateral be?
+
+The Pay2Play collateral should be set to the value of the maximum fill reward
+multiplied by the number of slots, because if the contract starts in optimal
+conditions, where slots are filled straight away, the collateral would need to
+pay for the maximum fill reward for each slot. In reality, slots will not fill
+at optimal conditions, and so there will be some collateral leftover to return
+to the client once the contract starts successfully.
+
+#### Pay2Play collateral trade-offs
+
+The trade-off, however, is that there is an increased barrier to entry due to
+the requirement of clients to provide an additional collateral.
+
+### Pay2Play alternate solution: client fee for cancelled contracts
+
+Pay2Play is a fee that is burned if a contract does not start (all slots were
+not filled before expiry). The source of the burned funds comes from the total
+value put up by the client to pay for SPs to store their data. However, if the
+contract is successfully completed, the fee is not burned and goes toward
+payment of the SP/validator rewards.
+
+The main downside to this is that there is no source of funding for the fill
+reward.
+
+#### Pay2Play fee as a value
 
 The Pay2Play fee should not be a percentage of total request reward, because in
 a situation where a client has created a very cheap request, a percentage of the
@@ -216,22 +254,9 @@ short in duration requests can be, depending on the value of the fee that is
 set. There is an alternative solution that avoids this caveat: client
 collateral.
 
-### Pay2Play alternative solution: client collateral
-
-Instead of burning a fee from funds already provided by the client, an
-*additional* collateral could be provided. This collateral is deposited by the
-client when creating a request for storage, and is returned once the request has
-started (all slots have been filled).
-
-This avoids the caveat of forcing minimum request value to be within bounds of a
-fee, as the collateral will not be taken from the total request value.
-
-The trade-off however, is that there is an increased barrier to entry due to the
-requirement of clients to provide an additional collateral.
-
 ### Pay2Play trade-off
 
-However, there is one downside to the Pay2Play fee/collateral. If a client is
+However, there is one downside to the Pay2Play collateral/fee. If a client is
 behaving correctly, but submits a request for storage that is out of the range
 of acceptable market conditions, then the request will not be started, and the
 client will lose their collateral.
@@ -529,8 +554,6 @@ client attack" that are not well covered in the slot reservation design. There
 could be even more complexities added to the design to accommodate these two
 attacks (see the other proposed solution for the mitigation of these attacks).
 
-// TODO: add slot start point source of randomness (block hash) into
-slot start point in the dispersal/sliding window design
 
 // THOUGHTS: Perhaps the expanding window mechanism should be network-aware such
 that there are always a minimum of 2 SPs in a window at a given time, to
