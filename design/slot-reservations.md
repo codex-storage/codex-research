@@ -1,15 +1,15 @@
 # Slot reservations
 
-Competition between hosts to fill slots has some advantages, such as providing
-an incentive for hosts to become proficient in downloading content and
-generating proofs. It also has some drawbacks, for instance it can lead to
-network inefficiencies because multiple hosts do the work of downloading and
-proving, while only one host is rewarded for it. These inefficiencies lead to
-higher costs for hosts, which leads to an overall increase in the price of
-storage on the network. It can also lead to clients inadvertently inviting too
-much network traffic to themselves. Should they for instance post a very
-lucrative storage request, then this invites a lot of hosts to start downloading
-the content from the client simultaneously, not unlike a DDOS attack.
+Competition between storage providers (SPs) to fill slots has some advantages,
+such as providing an incentive for SPs to become proficient in downloading
+content and generating proofs. It also has some drawbacks, for instance it can
+lead to network inefficiencies because multiple SPs do the work of downloading
+and proving, while only one SP is rewarded for it. These inefficiencies lead to
+higher costs for SPs, which leads to an overall increase in the price of storage
+on the network. It can also lead to clients inadvertently inviting too much
+network traffic to themselves. Should they for instance post a very lucrative
+storage request, then this invites a lot of SPs to start downloading the content
+from the client simultaneously, not unlike a DDOS attack.
 
 Slot reservations are a means to avoid these inefficiencies by only allowing SPs
 who have secured a slot reservation to fill the slot. Furthermore, slots can
@@ -19,12 +19,12 @@ address space on the network.
 
 ## Proposed solution: slot reservations
 
-Before downloading the content associated with a slot, a limited number of hosts
-can reserve the slot. Only hosts that have reserved the slot can fill the slot.
-After the host downloads the content and calculates a proof, it can move the
-slot from its reserved state into the filled state by providing collateral and
-the storage proof. Then it begins to periodically provide storage proofs and
-accrue payments for the slot.
+Before downloading the content associated with a slot, a limited number of SPs
+can reserve the slot. Only SPs that have reserved the slot can fill the slot.
+After the SP downloads the content and calculates a proof, it can move the slot
+from its reserved state into the filled state by providing collateral and the
+storage proof. Then it begins to periodically provide storage proofs and accrue
+payments for the slot.
 
 ```
          reserve         proof & collateral
@@ -42,10 +42,10 @@ accrue payments for the slot.
             ---------------- time ---------------->
 ```
 
-There is an initial race for eligible SPs who are first to secure a reservation, then a
-second race amongst the SPs with a reservation to fill the slot (with collateral
-and the generated proof). However, not all SPs in the network can reserve a slot
-initially: the [expanding window
+There is an initial race for eligible SPs who are first to secure a reservation,
+then a second race amongst the SPs with a reservation to fill the slot (with
+collateral and the generated proof). However, not all SPs in the network can
+reserve a slot initially: the [expanding window
 mechanism](https://github.com/status-im/codex-research/blob/ad41558900ff8be91811aa5de355148d8d78404f/design/marketplace.md#dispersal)
 dictates which SPs are eligible to reserve the slot.
 
@@ -57,25 +57,31 @@ number of SP addresses to fill/repair the slot at the start. Over time, the
 number of eligible SP addresses increases, until eventually all SP addresses in
 the network are eligible.
 
-The expanding window mechanismstarts off with a random source address, defined
-as $hash(block hash, request id, slot index, reservationindex)$. The distance
-between each SP address and the source address can be defined as $XOR(A, A_0)$
-(kademlia distance). Once the allowed distance is greater than SP's distance,
-the SP is considered eligible to reserve a slot. The allowed distance for
-eligible addresses over time $t_i$ can be [defined as $2^{256} *
-F(t_i)$](https://hackmd.io/@bkomuves/BkDXRJ-fC). As this allowed distance value
-increases along a curve, more and more addresses will be eligible to participate
-in reserving that slot. In total, eligible addresses are those that satisfy:
+The expanding window mechanism starts off with a random source address, defined
+as $hash(block hash, request id, slot index, reservationindex)$, with a unique
+source address for each reservation of each slot. The distance between each SP
+address and the source address can be defined as $XOR(A, A_0)$ (kademlia
+distance). Once the allowed distance is greater than SP's distance, the SP is
+considered eligible to reserve a slot. The allowed distance for eligible
+addresses over time $t_i$ can be [defined
+as](https://hackmd.io/@bkomuves/BkDXRJ-fC) $2^{256} * F(t_i)$, where $2^{256}$
+represents the total number of 256-bit addresses in the address space, and
+$F(t_i)$ represents the expansion function over time. As this allowed distance
+value increases along a curve, more and more addresses will be eligible to
+participate in reserving that slot. In total, eligible addresses are those that
+satisfy:
 
 $XOR(A, A_0) < 2^{256} * F(t_i)$
 
-Because the source address for the expanding window is generated using the slot
-index and the reservation index, that means the source address for each
-reservation in each slot will be different.
+Furthermore, the client can change the curve of the rate of expansion, by
+setting a [dispersal
+parameter](https://github.com/codex-storage/codex-research/blob/ad41558900ff8be91811aa5de355148d8d78404f/design/marketplace.md#dispersal)
+of the storage request, $h$, which represents the percentage of the network
+addresses that will be eligible halfway to the time of expiry. $h$ can be
+defined as:
 
-Furthermore, the client can set the rate of expansion by defining the [parameter
-$h$](https://hackmd.io/@bkomuves/BkDXRJ-fC#Parametrizing-the-speed-of-expansion)
-as the [dispersal parameter](https://github.com/codex-storage/codex-research/blob/ad41558900ff8be91811aa5de355148d8d78404f/design/marketplace.md#dispersal) of the request.
+$h := F(0.5)$, where $0 \lt h \lt 1$ and $h \neq 0.5$
+
 Changing the value of $h$ will [affect the curve of the rate of
 expansion](https://www.desmos.com/calculator/pjas1m1472) (interactive graph).
 
@@ -91,7 +97,13 @@ transaction itself creates a signal of intent from an SP to fill the slot. If
 the SP were to not fill the slot, then other SPs that have reserved the slot
 will fill it.
 
-#### No reservation reward
+#### No reservation/fill reward
+
+Fill rewards were originally proposed to incentivize filling slots as fast as
+possible. However, the SPs are already being paid out for the time that they
+have filled the slot, thus negating the need for additional incentivization. If
+additional incentivization is desired by the client, then an increase in the
+value of the storage request is possible.
 
 Adding a fill reward for SPs who ultimately fill the slot is not necessary
 because, like the SP rewards for providing proofs, fill rewards would be paid
@@ -101,14 +113,14 @@ payout. Therefore, if a client is so inclined to provide a fill reward, they
 could instead increase the total reward of the storage request.
 
 In this simplified slot reservations proposal, there will not be reservation
-collateral and reward requirements until the behavior in a live environment can
-be observed and it is determined this are necessary mechanisms.
+collateral nor reward requirements until the behavior in a live environment can
+be observed to determine these are necessary mechanisms.
 
 ### Slot reservation attacks
 
 Name         | Attack description
 :------------|:--------------------------------------------------------------
-Clever SP    | SP drops reservation when a better opportunity presents itself
+Clever SP    | SP drops slot when a better opportunity presents itself
 Lazy SP      | SP reserves a slot, but doesn't fill it
 Censoring SP | acts like a lazy SP for specific CIDs that it tries to censor
 Greedy SP    | SP tries to fill multiple slots in a request
