@@ -63,10 +63,14 @@ could allow Ethereum validators to use (a part of) their stake on the beacon
 chain for filling slots in storage contracts. There are a few downsides to this.
 It becomes rather difficult to reason about how high the stake for a storage
 contract should be when when the stake behind a storage provider's promise can
-be shared with a number of other protocols (§3.4.1). Also, the hardware
-requirements for running an Ethereum validator are sufficiently different from
-the requirements of running a Codex provider, that we do not expect there to be
-many people that run both.
+be shared with a number of other protocols (§3.4.1). Codex uses part of the
+slashed stake to incentivize repair, which would not be possible with restaking,
+because the stake only becomes available in Eigenlayer after the validator stops
+validating the beacon chain, and withdraws its collatoral. That is, if the stake
+hasn't already been slashed by the beacon chain. Also, the hardware requirements
+for running an Ethereum validator are sufficiently different from the
+requirements of running a Codex provider, that we do not expect there to be many
+people that run both.
 
 We might also use restaking to keep proof aggregators honest (§4.1, point 6).
 Preferably using a combination of staked Codex tokens and restaked ETH (§4.4),
