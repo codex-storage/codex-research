@@ -66,7 +66,7 @@ contract should be when when the stake behind a storage provider's promise can
 be shared with a number of other protocols (§3.4.1). Codex uses part of the
 slashed stake to incentivize repair, which would not be possible with restaking,
 because the stake only becomes available in Eigenlayer after the validator stops
-validating the beacon chain, and withdraws its collatoral. That is, if the stake
+validating the beacon chain, and withdraws its collateral. That is, if the stake
 hasn't already been slashed by the beacon chain. Also, the hardware requirements
 for running an Ethereum validator are sufficiently different from the
 requirements of running a Codex provider, that we do not expect there to be many
@@ -89,7 +89,7 @@ EIGEN Token
 The EIGEN token is a separate project only marginally related to Eigenlayer. It
 allows staking to disincentivize subjective faults. In contrast to objective
 faults, subjective faults cannot be coded into a smart contract, but need to be
-adjucated by people (§1.2).
+adjudicated by people (§1.2).
 
 This is implemented though a forkable token (§2.3.1) called EIGEN. Every time a
 subjective decision needs to be made, someone can create a new EIGEN' token, and
@@ -113,4 +113,4 @@ interesting one, but not without its own risks that are not easy to quantify.
 The EIGEN token is probably not interesting for Codex, because we've taken great
 effort to ensure that bad behaviour on the network is either objectively
 punishable or economically disincentivized, negating the need for human
-adjucation.
+adjudication.
