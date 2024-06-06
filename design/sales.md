@@ -32,11 +32,40 @@ to sell and under which conditions.
       amount
       maximum duration
       minimum price
+      maximum collateral price
 
 Availabilities consist of an amount of storage, the maximum duration and minimum
 price to sell it for. They represent storage that is for sale, but not yet sold.
 This is information local to the node that can be altered without affecting
 global state.
+
+## Selling strategy
+
+We ship a basic algorithm for optimizing the selling process. It does not aim to be 
+the best algorithm, as there might be different strategies that users might want to adapt.
+Instead, we chose to provide a basic implementation and, in the future, expose the 
+internals of decision-making to the users through an API. This will give them the option 
+to plug in more robust and custom strategies. The main design goal of our selling strategy 
+is the maximization of utilized capacity with the most profitable requests. 
+This decision leads to several behaviors that we describe below.
+
+We do not wait for potentially more profitable requests to arrive sometime later on, 
+as defining this waiting period is not trivial. Because while waiting, you might miss 
+out on current opportunities.
+
+When we have availability for sale, we aim to fill slots right away. This means it 
+is crucial to have the current market state available to choose from at the moment 
+when the availability is added or returned.
+
+If the size of our currently available storage space does not suffice to fill the most 
+profitable slots, we choose less profitable ones that fit into our free space.
+
+Availabilities probably won't ever be fully utilized as the probability of finding 
+the right-sized slot is very low. Hence, the algorithm needs to take it into consideration.
+
+All the previously mentioned behaviors are limited by user-specified constraints, 
+which are passed as parameters when creating availability. Most of this behavior 
+is implemented through an ordered slot list, as described below.
 
 ## Adding availability
 
@@ -135,34 +164,34 @@ the state is kept on local disk by the Repo and the Datastore. How much space is
 reserved to be sold is persisted on disk by the Repo. The availabilities are
 persisted on disk by the Datastore.
 
-## Slot queue
+## Ordered slot list
 
-Once a new request for storage is created on chain, all hosts will receive a
-contract event announcing the storage request and decide if they want to act on
-the request by matching their availabilities with the incoming request. Because
-there will be many requests being announced over time, each host will create a
-queue of matching request slots, adding each new storage slot to the queue.
+The ordered slot list is a list where slots that are currently seeking a host to 
+fill them are stored. It is capped at a certain capacity and ordered by 
+profitability (which will be described later). The most profitable slots are at
+the beginning, while the least profitable ones are at the end.
 
-### Adding slots to the queue
+### Adding slots to the list
 
-Slots will be added to the queue when request for storage events are received
+Slots will be added to the list when requests for storage events are received
 from the contracts. Additionally, when slots are freed, a contract event will
-also be received, and the slot will be added to the queue. Duplicates are
+also be received, and the slot will be added to the list. Duplicates are
 ignored.
 
 When all slots of a request are added to the queue, the order should be randomly
-shuffled, as there will be many hosts in the network that could potentially pick
-up the request and will process the first slot in the queue at the same time.
-This should avoid some clashes in slot indices chosen by competing hosts.
+shuffled. This is because there will be many hosts in the network that could 
+potentially pick up the request and process the first slot in the queue
+simultaneously. Randomly shuffling the order will help avoid clashes in slot
+indices chosen by competing hosts.
 
-Before slots can be added to the queue, availabilities must be checked to ensure
-a matching availability exists. This filtering prevents all slots in the network
-from entering the queue.
+If the list were to exceed its capacity with the new slot, the tail would be 
+removed, but only if the tail's profitability is lower than that of the new slot.
+Otherwise, the new slot is discarded.
 
-### Removing slots from the queue
+### Removing slots from the list
 
 Hosts will also receive contract events for when any contract is started,
-failed, or cancelled. In all of these cases, slots in the queue pertaining to
+failed, or cancelled. In all of these cases, slots in the list pertaining to
 these requests should be removed as they are no longer fillable by the host.
 Note: expired request slots will be checked when a request is processed and its
 state is validated.
@@ -179,62 +208,59 @@ Slots in the queue should be sorted in the following order:
   involve bandwidth incentives, profit can be estimated as `duration * reward`
   for now.
 
-Note: datset size may eventually be included in the profit algorithm and may not
+Note: dataset size may eventually be included in the profit algorithm and may not
 need to be included on its own in the future. Additionally, data dispersal may
-also impact the datset size to be downloaded by the host, and consequently the
+also impact the dataset size to be downloaded by the host, and consequently the
 profitability of servicing a storage request, which will need to be considered
 in the future once profitability can be calculated.
 
-### Queue processing
+## Slot list processing
 
-Queue processing will be started only once, when the sales module starts and
-will process slots continuously, in order, until the queue is empty. If the
-queue is empty, processing of the queue will resume once items have been added
-to the queue. If the queue is not empty, but there are no availabilities, queue
-processing will resume once availabilites have been added.
+Slot list processing is triggered by three cases:
 
-As soon as items are available in the queue, and there are workers available for
-processing, an item is popped from the queue and processed.
+1. When the node is starting.
+2. When there is a change to the availabilities set, either a new one is added 
+or the capacity is changed.
+3. When new slots are added to the slot list.
 
-When a slot is processed, it is first checked to ensure there is a matching
-availability, as these availabilities will have changed over time. Then, the
-sales process will begin. The start of the sales process should ensure that the
-slot being processed is indeed available (slot state is "free") before
-continuing. If it is not available, the sales process will exit and the host
-will continue to process the top slot in the queue. The start of the sales
-process should also check to ensure the host is allowed to fill the slot, due to
-the [sliding window
-mechanism](https://github.com/codex-storage/codex-research/blob/master/design/marketplace.md#dispersal).
-If the host is not allowed to fill the slot, the sales process will exit and the
-host will process the top slot in the queue.
+Processing works using a pool of workers, which are there to control the speed at
+which the slots are filled. There are limitations on the number of slots that can 
+be filled simultaneously due to bandwidth constraints, etc. Each worker fills only
+one slot at a time. The number of workers should be configurable.
 
-#### Queue workers
-Each time an item in the queue is processed, it is assigned to a workers. The
-number of allowed workers can be specified during queue creation. Specifying a
-limited number of workers allows the number of concurrent items being processed
-to be capped to prevent too many slots from being processed at once.
+When processing is triggered, a worker starts iterating through the slot list from 
+the beginning (e.g., the most profitable slots) and matches them against the node's
+availabilities. If there is a match, it will mark that given slot as reserved 
+(to prevent other workers from double-processing it) and start the state machine. 
+Once the state machine reaches the Filled state, the worker is returned to the 
+worker pool along with the successful result. If the previous result was successful,
+this process repeats until the previous result is "failure", which occurs when there
+is no match for any of the slots. This way, the process finishes as there is a 
+limited number of availabilities and their capacities.
 
-During queue processing, only when there is a free worker will an item be popped
-from the queue and processed. Each time an item is popped and processed, a
-worker is removed from the available workers. If there are no available workers,
-queue processing will resume once there are workers available.
+### Asynchronicity
+The implementer should keep in mind that there are problems regarding the asynchronicity
+of triggering the processing and accessing/modifying the slot list.
 
-#### Adding availabilities
-When a host adds an availability, a signal is triggered in the slot queue with
-information about the availability. This triggers a lookup of past request for
-storage events, capped at a certain number of past events or blocks. The slots
-of the requests in each of these events are added to the queue, where slots
-without matching availabilities are filtered out (see [Adding slots
-to the queue](#adding-slots-to-the-queue) above). Additionally, when slots of
-these requests are processed in the queue, they will be checked to ensure that
-the slots are not filled (see [Queue processing](#queue-processing) above).
+First problem is related to the fact that the processing can be triggered from 
+multiple points, and as the processing might be quite time-consuming when filling
+slots, it might happen that multiple processing processes could be running at the
+same time, which should not be the case. Realistically, the processing will be 
+mostly called from the "new slots added to list" point.
+There is a possibility of using locks, but that might lead to growing the async 
+dispatcher queue and potential issues connected with that.
+Another option could be to have a function called `scheduleProcessing()` which would
+behave in a similar fashion as a singleton, allowing only one running processing at a time. 
+However, it should allow scheduling of one more processing run if there is currently 
+processing running. This is because the processing might be iterating in the middle
+of the ordered list and would not take in consideration the changes that were
+introduced in the beginning of the list.
 
-### Implementation tips
-
-Request queue implementations should keep in mind that requests will likely need
-to be accessed randomly (by key, eg request id) and by index (for sorting), so
-implemented structures should handle these types of operations in as little time
-as possible.
+The second problem is related to mutations of the slot list while processing it, 
+where the list could be changing under the "worker's hand" as the changes come from
+blockchain events. A potentially sufficient mitigation for this could be to keep the 
+iteration over the slot list completely synchronous. Perform all the asynchronous 
+data fetching before the list iteration and avoid yielding in the loop.
 
 ## Repo
 
