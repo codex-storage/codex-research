@@ -85,6 +85,81 @@ $h := F(0.5)$, where $0 \lt h \lt 1$ and $h \neq 0.5$
 Changing the value of $h$ will [affect the curve of the rate of
 expansion](https://www.desmos.com/calculator/pjas1m1472) (interactive graph).
 
+#### Eligible address calculations in-depth
+
+The following is taken from https://hackmd.io/@bkomuves/BkDXRJ-fC, with only
+slight variations to constrain size, reproduced with written
+permission from the author.
+
+##### Assumptions
+
+We assume network address are randomly and more-or-less uniformly selected from
+a space of $2^{256}$.
+
+We also assume that the window can only change in discrete step, based on some
+underlying blockchain's cadence (for example this would be approx every 12
+seconds in case of Ethereum), and that we measure time based on timestamps
+encoded in this blockchain blocks.
+
+However with this assumption given, we want to be as granular and tunable as
+possibly.
+
+We have a time duration in which we want to go from a single network address to
+the whole address-space.
+
+To be able to make this work nicely, first I propose to define a linear time
+function $t_i$ which goes from 0 to 1.
+
+##### Implementation
+
+At any desired block with timestamp $timestamp_i$ simply compute:
+
+$$t_i := \frac{timestamp_i - start}{expiry - start}$$
+
+Then to get a network range, you can plug in any kind of expansion function
+$F(x)$ with $F(0)=0$ and $F(1)=1$; for example a parametric exponential:
+
+ $$ F_s(x) = \frac{\exp(sx) - 1}{\exp(s) - 1} $$
+
+Remark: with this particular function, you probably want $s<0$ (resulting in
+fast expansion initially, slowing down later). Here is a Mathematica one-liner
+to play with it:
+```
+    Manipulate[
+      Plot[ (Exp[s*x]-1)/(Exp[s]-1), {x,0,1}, PlotRange->Full ],
+        {s,-10,-1} ]
+```
+You can easily do the same with eg. the online [Desmos](https://www.desmos.com/calculator) tool.
+
+##### Address window
+
+Finally, an address $A$ becomes eligible at block $i$ if the Kademlia distance
+from the "window center" $A_0$ is smaller than $2^{256}\times F(t_i)$:
+
+ $$ XOR(A,A_0) < 2^{256}\cdot F(t_i) $$
+
+Note: since $t_i$ only becomes 1 exactly at expiry, to allow the whole network
+to particite near the end, there should be a small positive $\delta > 0$ such
+that $F(t)=1$ for $t>1-\delta$, leaving the last about $100\delta$ percentage of
+the total slot fill window when the whole network is eligible to participate.
+
+Alternatively, you could rescale $t_i$ to achieve the same effect: $$ t_i' :=
+\min(\; t_i/(1-\delta)\;,\;1\;) $$ The latter is probably simpler because still
+have complete freedom in selecting the expansion function $F(x)$.
+
+##### Parametrizing the speed of expansion
+
+While we could in theory have arbitrary expansions functions, we probably don't
+want more than an one parameter family, that is, a single parameter to set the
+curve. However, even if we have a single parameter, there could be any number of
+different ways to map a number to the same family of curves.
+
+In the above example $F_s(t)$, while $s$ is quite natural from a mathematical
+perspective, it doesn't really have any meaning for the user. A possibly better
+parametrization would be the value $h:=F_s(0.5)$, meaning "how big percentage of
+network is allowed to participate at half-time". You can of course compute $s$
+from $h$: $$ s = 2\log\left(\frac{1-h}{h}\right) $$
+
 ### Abandoned ideas
 
 #### No reservation collateral
