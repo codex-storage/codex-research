@@ -170,7 +170,7 @@ state is validated.
 ### Sort order
 
 Slots in the queue should be sorted in the following order:
-1. Seen flag
+1. Seen flag (`true` flag should be lower than `false`)
 2. Profit (descending)<sup>1</sup>
 3. Collateral required (ascending)
 4. Time before expiry (descending)
