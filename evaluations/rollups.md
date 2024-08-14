@@ -55,15 +55,15 @@ And there's Taiko, which uses a combination of zero-knowledge proofs and fraud
 proofs to keep the network honest:
 - Taiko
 
-Gas costs
----------
+Gas prices
+----------
 
-A rough approximation of average gas costs for submitting a Codex storage proof
+A rough approximation of average gas prices for submitting a Codex storage proof
 for each rollup:
 
-| Rollup              | Average proof costs | Potential profit |
+| Rollup              | Average proof price | Potential profit |
 | ------------------- |  ------------------ | ---------------- |
-| Mantle              | $0.0000062723	    |      $2.58       |
+| Mantle              | $0.0000062723       |      $2.58       |
 | Boba network        | $0.0016726250       |     -$2.54       |
 | Immutable zkEVM     | $0.0073595500       |    -$20.01       |
 | Arbitrum            | $0.0083631250       |    -$23.09       |
