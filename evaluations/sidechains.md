@@ -168,7 +168,10 @@ the gas price will go up.
 
 For the short term it seems viable to start with a dedicated side chain for
 Codex, while there is no high demand yet. This gives us time to work on reducing
-the number of transactions, for instance by aggregating storage proofs.
+the number of transactions, for instance by aggregating storage proofs. In the
+beginning the number of transactions won't be sufficient to cover the costs of
+running validators, so some sponsoring of validators will be required to
+bootstrap the chain.
 
 For the medium term we can consider to have multiple side chains depending on
 demand. If demand is reaching capacity of the existing side chain(s) then
