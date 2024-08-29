@@ -243,3 +243,43 @@ We argue that is not a problematic scenario for our storage proof network. The
 prover did provide a correct proof to at least one correct validator, meaning
 that it is still storing the data that it is supposed to. Not being able to
 slash the prover in this case is therefore ok.
+
+Staking
+-------
+
+It can be expensive to calculate the amount of stake associated with a combined
+BLS signature on-chain. Because any combination that represents > 2/3 stake is
+valid, there can be many different valid combinations. If we have to calculate
+the amount of stake every time that a watcher submits a combined signature that
+signals that a proof was missed, then the gas fees would be prohibitive.
+
+So instead we expect there to be pre-calculated combined public keys that
+represent > 2/3 stake majorities. The gas costs for validating the stake that
+these combined public keys represent can be borne by the validators when they
+put down their stake.
+
+The tokens that validators deposit as stake can be used to keep them honest.
+Should a validator sign off on an invalid proof, then the invalid proof and the
+signature can be used to prove on-chain that the validator misbehaved. Their
+stake, or a part thereof, can then be burned as a disincentive for misbehaving.
+
+Pros and cons
+-------------
+
+There are a couple of advantages to using a very light form of consensus. The
+validators do not need to communicate amongst themselves, so we can forego the
+three rounds of communication inherent to Byzantine Fault Tolerant consensus
+algorithms. This leads to less communication overhead and lower latency.
+
+Our design also allows validators to operate nearly stateless. They only need to
+keep track of which proofs they themselves signed off on for the current period
+and one or two previous periods, depending on how much time we want to allow for
+watchers to notice missing proofs and submit `MissedSigned` messages.
+
+In exchange for these advantages we have a drawback as well. The number of
+validators is by necessity fairly small (in the order of < 100 validators)
+because each prover needs to send messages to and receive responses from about
+2/3 of the validators. Measures can be taken to increase the decentralization of
+the validators. We could for example introduce epochs in which some validators
+are chosen from a larger set of potential validators, but that comes at the
+expense of added complexity.
