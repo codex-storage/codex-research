@@ -114,10 +114,10 @@ Flows
 ### Successfull proof submission and validation ###
 
 Provers monitor the on-chain marketplace to check in which periods they need to
-provide a storage proof. When a proof is required in the current *period*, the
-prover gathers public *inputs* for the slot, including the random challenge for
-the current period and calculates a zero-knowledge storage *proof*. The prover
-then broadcast `SubmitProof(slot id, period, inputs, proof)`:
+provide a storage proof. When a prover sees that a proof is required for a slot
+in the current *period*, it gathers public *inputs* for the slot, including the
+random challenge and calculates a zero-knowledge storage *proof*. The prover
+then broadcasts `SubmitProof(slot id, period, inputs, proof)`:
 
                                                              validator
                       SubmitProof
@@ -225,7 +225,7 @@ Consensus
 ---------
 
 The core of our design consists of the fact that correct validators either sign
-off on a `ProofSigned` message -or- on a `MissedSigned` message, but never on
+off on a `ProofSigned` message or on a `MissedSigned` message, but never on
 both. We then use a light form of consensus by combining signatures of
 validators representing > 2/3 stake. Because we assume that there are < 1/3
 stake byzantine validators, it is always possible to either get enough
@@ -241,5 +241,5 @@ missed proof.
 
 We argue that is not a problematic scenario for our storage proof network. The
 prover did provide a correct proof to at least one correct validator, meaning
-that is still storing the data that it is supposed to. Not being able to slash
-it in this case is therefore ok.
+that it is still storing the data that it is supposed to. Not being able to
+slash the prover in this case is therefore ok.
