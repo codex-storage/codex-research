@@ -20,13 +20,13 @@ Dagger. It is not meant to be a criticism of IPFS.
 + BitSwap protocol for exchanging blocks supports multiple strategies (§3.4.2),
   so it should be relatively easy to add a micropayment strategy.
 + Uses content addressing (§3.5)
-+ The Merkle DAG is simple, yet allows constucting filesystems,
++ The Merkle DAG is simple, yet allows constructing filesystems,
   key-value stores, databases, messaging system, etc.. (§3.5)
 
 #### Cons:
 
 - Kademlia prefers long-lived nodes (§2.1.1), which is not ideal for mobile
-  enviroments (although it's unclear whether there are any better alternatives)
+  environments (although it's unclear whether there are any better alternatives)
 - The default BitSwap strategy falls just short of introducing a currency with
   micro payments, necessitating additional work for nodes to find blocks to 
   barter with (§3.4)

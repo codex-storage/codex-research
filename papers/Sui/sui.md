@@ -31,7 +31,7 @@ Transactions on owned objects require 2 roundtrips to a quorum for byzantine
 broadcast. Transactions on shared objects require 4-8 round trips to a quorum
 for byzantine agreement. (Whitepaper §5, "Latency")
 
-### Parallellism ###
+### Parallelism ###
 
 Sui uses the
 [Move](https://github.com/MystenLabs/sui/blob/main/doc/paper/sui.pdf) language

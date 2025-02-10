@@ -23,14 +23,14 @@ lead to smaller proofs than zkSNARKs can provide.
 Tooling
 -------
 
-[Zokrates][1] is a complete toolbox for specifiying and generating and verifying
+[Zokrates][1] is a complete toolbox for specifying and generating and verifying
 zkSNARK proofs. It's written in Rust, has Javascript bindings, and can generate
 Solidity code for verification. C bindings appear to be absent.
 
 [libSNARK][2] and [libSTARK][3] are C++ libraries for zkSNARK and zkSTARK
 proofs. libSNARK can be used as a backend for Zokrates.
 
-[bellman][4] is a Rust libray for zkSNARK proofs. It can also be used as a
+[bellman][4] is a Rust library for zkSNARK proofs. It can also be used as a
 backend for Zokrates.
 
 Iden3 created a suite of tools ([circom][5], [snarkjs][6], [rapidsnark][7]) for
