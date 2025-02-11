@@ -29,19 +29,19 @@ Requests on the new smart contract, but it will still fulfill the duties of the 
 contract.
 
 ```
-                                ┌─────────────────────────────────────────      
-                                │                Contract v2                    
-┌───────────────────────────────┼────────────────────┬──────────────────────►   
+                                ┌─────────────────────────────────────────
+                                │                Contract v2
+┌───────────────────────────────┼────────────────────┬──────────────────────►
 │           Contract v1         │┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼┼│                      time
-└───────────────────────────────┼────────────────────┤                          
-                                │    Grace period    │                          
-                                │                    │                          
-                                │                    │                          
-                                │                    │                          
-                                │                    │                          
-                                │                    │                          
-                       Codex release with             Codex release that        
-                       new smart contract             removes old contract      
+└───────────────────────────────┼────────────────────┤
+                                │    Grace period    │
+                                │                    │
+                                │                    │
+                                │                    │
+                                │                    │
+                                │                    │
+                       Codex release with             Codex release that
+                       new smart contract             removes old contract
 ```
 
 An important consideration for this upgrade mechanism is that we plan to limit the maximum duration of Storage Requests.
@@ -102,7 +102,7 @@ initial ideals of a permissionless approach.
 ### Upgradable contract
 
 OpenZeppelin has tooling for writing [Upgradable contracts](https://docs.openzeppelin.com/upgrades-plugins/1.x/). While
-this approach has some technical limitations, it should be sufficient for realizing bug fixes as part of emergency upgrades. 
+this approach has some technical limitations, it should be sufficient for realizing bug fixes as part of emergency upgrades.
 This would require an admin role that would have this capability.
 
 While this solution provides the most capable and flexible way to ensure security, it also gives "too much power" for
@@ -191,19 +191,19 @@ contracts — a business logic contract and a funds vault contract.
 We will reference the business logic contract as **Marketplace contract** as it will contain the Marketplace logic.
 It will be possible to perform emergency upgrades using concepts described in the [Upgradable contract](#upgradable-contract) section.
 In this way, if there is a bug/exploit that would affect the funds, it is possible to patch it quickly.
-The original "feature upgrade" path still holds with this approach, where this business logic contract would get upgraded 
+The original "feature upgrade" path still holds with this approach, where this business logic contract would get upgraded
 as discussed in the [Feature upgrades](#feature-upgrades) section.
 The admin role would belong to multisig and be maintained inside the organization. This contract would not hold any funds as
 it would delegate them to the Vault contract.
 
 Vault contract will have the responsibility to keep users' funds safe. It should have minimal logic incorporated to minimize
-the attack surface. Ideally, the Vault contract will be deployed once and never altered as it will have one simple task 
+the attack surface. Ideally, the Vault contract will be deployed once and never altered as it will have one simple task
 to do, and there should not be a need to extend it. This contract will not incorporate the upgradability capabilities,
-but as a safety measure, it will be possible to freeze it as described in the [Freezing contract](#freezing-contract) section. 
+but as a safety measure, it will be possible to freeze it as described in the [Freezing contract](#freezing-contract) section.
 Freezing the Vault would be done in case of severe exploitable bugs.
 
-Thanks to this splitting of the contract, we will limit the liabilities over funds control as described 
-in the [Upgradable contract](#upgradable-contract) section, but at the same it gives us the flexibility to react to 
+Thanks to this splitting of the contract, we will limit the liabilities over funds control as described
+in the [Upgradable contract](#upgradable-contract) section, but at the same it gives us the flexibility to react to
 unforeseen situations.
 
 The Vault contract should have logic that prevents the simultaneous draining of all the funds. We came up with two designs for
@@ -265,11 +265,11 @@ Codex node will not have to be bothered about Vault's existence as every fund's 
 through the Marketplace contract. The Codex node will have a hardcoded Marketplace contract address with which it will interact.
 
 ```
-┌────────────┐     ┌──────────────────────┐     ┌────────────────┐      
-│            │     │                      │     │                │      
-│ Codex Node ├────►│ Marketplace contract ├────►│ Vault contract │      
-│            │     │                      │     │                │      
-└────────────┘     └──────────────────────┘     └────────────────┘      
+┌────────────┐     ┌──────────────────────┐     ┌────────────────┐
+│            │     │                      │     │                │
+│ Codex Node ├────►│ Marketplace contract ├────►│ Vault contract │
+│            │     │                      │     │                │
+└────────────┘     └──────────────────────┘     └────────────────┘
  ```
 
 ### Scenarios handling
