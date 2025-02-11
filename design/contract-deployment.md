@@ -206,56 +206,108 @@ Thanks to this splitting of the contract, we will limit the liabilities over fun
 in the [Upgradable contract](#upgradable-contract) section, but at the same it gives us the flexibility to react to
 unforeseen situations.
 
-The Vault contract should have logic that prevents the simultaneous draining of all the funds. We came up with two designs for
-this - time-based locking and recipient-based locking. The time-based locking Vault is described in depth below.
-The recipient-base Vault works with a locking schema where the funds have a predefined set of recipients to which the funds
-can be transferred. In this way, the hacker can't redirect the funds to their controlled accounts.
-Unfortunately, this concept is not applicable to Marketplace because of slot repairs, when one slot's host is replaced
-with another, which would require reallocating funds and hence open an opportunity for hackers to redirect the funds to
-their accounts.
+The Vault contract should have logic that prevents the simultaneous draining of all the funds. We came up with two ideas for
+this - time-based locking and recipient-based locking. The Vault described below utilizes both ideas.
 
-### Time-based Vault
+### Vault
 
-This Vault works on locking the funds until a certain time threshold is reached when it allows them to be spent. In this way
-there is only a tiny fraction of the funds possible to be spent at a given time by the "business logic" contract as
-we assume nodes will proactively and quickly collect their funds when able. If there is an exploit on the business logic
+This Vault works on locking the funds until a certain time threshold is reached when it allows them to be withdrawn. In this way
+there is only a tiny fraction of the funds possible to be redirected at a given time by the "business logic" contract as
+the vault only allows manipulation of funds while they are time-locked. If there is an exploit on the business logic
 contract, the attacker could withdraw only a small amount of funds.
 
 We envision the following API of the Vault contract:
 
 ```solidity
-contract TimeVault {
-   /// Creates new deposit with the given amount transferred from account "fromAccount" and locks it till spendable_from_timestamp
-   function deposit(uint256 amount, addr fromAccount, uint256 spendable_from_timestamp) returns (DepositId)
-   /// Deposits more funds to the already existing deposit 
-   function deposit(uint256 amount, addr fromAccount, uint256 spendable_from_timestamp, DepositId id) returns (DepositId)
-   
-   /// Extends the timelock of the specified deposit 
-   function extend(DepositId id, uint256 spendable_from_timestamp)
-   
-   /// Lower deposit amount of funds from the specified deposit
-   function burn(DepositId id, uint256 amount)
-   
-   /// Transfer the given amount to the recipient, provided the block's timestamp is after the deposit's time lock 
-   function spend(DepositId id, addr recipient, uint256 amount)
+contract Vault {
+  /// Locks the fund until the expiry timestamp. The lock expiry can be extended
+  /// later, but no more than the maximum timestamp.
+  function lock(Fund fund, Timestamp expiry, Timestamp maximum) {}
+
+  /// Deposits an amount of tokens into the vault, and adds them to the balance
+  /// of the recipient. ERC20 tokens are transfered from the caller to the vault
+  /// contract.
+  function deposit(Fund fund, Recipient recipient, uint128 amount) {}
+
+  /// Takes an amount of tokens from the recipient's balance and designates them
+  /// for the recipient. These tokens are no longer available to be transfered
+  /// to other accounts.
+  function designate(Fund fund, Recipient recipient, uint128 amount) {}
+
+  /// Transfers an amount of tokens from the acount of one recipient to the
+  /// other.
+  function transfer(Fund fund, Recipient from, Recipient to, uint128 amount) {}
+
+  /// Transfers tokens from the account of one recipient to the other over time.
+  function flow(Fund fund, Recipient from, Recipient to, TokensPerSecond rate) {}
+
+  /// Delays unlocking of a locked fund.
+  function extendLock(Fund fund, Timestamp expiry) {}
+
+  /// Burns an amount of designated tokens from the account of the recipient.
+  function burnDesignated(Fund fund, Recipient recipient, uint128 amount) {}
+
+  /// Burns all tokens from the account of the recipient.
+  function burnAccount(Fund fund, Recipient recipient) {}
+
+  /// Burns all tokens from all accounts in a fund.
+  function burnFund(Fund fund) {}
+
+  /// Transfers all ERC20 tokens in the recipient's account out of the vault to
+  /// the recipient address.
+  function withdraw(Fund fund, Recipient recipient) {}
+
+  /// Allows a recipient to withdraw its tokens from a fund directly, bypassing
+  /// the need to ask the controller of the fund to initiate the withdrawal.
+  function withdrawByRecipient(Controller controller, Fund fund) {}
 }
 ```
 
-_Important note is that this is a standalone contract, and it needs to keep track of the "owner of the deposit".
-Hence, only the address that performs initial deposit can manipulate the funds later on._
+_Important note is that this is a standalone contract, and it needs to keep track of the "controller of the fund".
+Hence, the funds for each controller are independent, and each controller can only manipulate its own funds._
 
 Integration into the Marketplace contract would be in the following way:
 
-- `deposit()` reward funds upon `requestStorage()` call with timelock until the Request's `expiry`
-   - If the Request starts, the timelock is extended till the Request's end
-   - If the Request expires, then funds (partial payouts for hosts and remaining funds for a client) can be withdrawn when requested
-- `deposit(depositId)` collateral funds to existing Request's deposit upon `fillSlot()`
-   - If the Request expires, the collateral can be withdrawn together with partial payouts
-- Upon slot's being freed because of the host being kicked out, then `burn()` host's collateral lowered by the amount dedicated repair reward
-- Upon Request's end, collateral and rewards can be `spend()`
-- Upon Request's failure, all host's collateral is `burn()`. The original reward can be `spend()` back to the client, but only after the Request's end
+- `RequestId`s are used as `Fund` identifiers in the vault.
+- When storage is requested by a client, it leads to the following calls on the
+  vault:
+   - `lock(requestId, request.expiry, request.end)`
+   - `deposit(requestId, request.client, request.price)`
+- When a slot is filled by a provider, the associated collateral is deposited
+  and designated, and some of the client tokens flow to the provider:
+   - `deposit(requestId, provider, collateral)`
+   - `designate(requestId, provider, collateral - repairReward)`
+   - `flow(requestId, client, provider, pricePerSlotPerSecond)`
+- When a request starts, the time lock is extended:
+   - `extendLock(requestId, request.end)`
+- When a request ends, then the vault will allow hosts and client to withdraw
+  their tokens. This consists of collateral and partial payouts for hosts and
+  any remaining funds for the client:
+  - either: `withdraw(requestId, recipient)`
+  - or: `withdrawByRecipient(marketplace, requestId)`
+- When a provider misses a storage proof, then a part of its collateral is
+  burned:
+  - `burnDesignated(requestId, provider, slashAmount)`
+- When a slot is freed because a provider missed too many proofs, then the
+  repair reward is set aside, the flow of tokens to the provider is reversed,
+  and the rest of the provider tokens are burned:
+  - `transfer(requestId, provider, client, repairReward)`
+  - `flow(requestId, provider, client, pricePerSlotPerSecond)`
+  - `burnAccount(requestId, provider)`
+- When a slot is repaired then the repair reward is transfered to the new
+  provider:
+  - `transfer(requestId, client, provider, repairReward)`
+- When a request fails, the entire fund is burned, including the client tokens:
+  - `burnFund(requestId)`
 
-The main disadvantage of this approach is that when the Request fails, the client can collect its original funds only after the Request's end.
+The main downsides of this approach are:
+- when the request fails, then the client also loses its tokens
+- when a request ends, then everyone can withdraw directly from the vault,
+  so it's not possible for the marketplace to e.g. request one final storage
+  proof before allowing withdrawal
+
+We believe that the added safety of using a time vault is important enough to
+accept these downsides.
 
 ### Contract's architecture
 
@@ -305,10 +357,9 @@ in the [Freezing contract](#freezing-contract) section.
 
 > [!CAUTION]
 > The multisig account will not have direct control over the funds as they will be in the safekeeping of the Vault.
-> But with the current Vault design, only the depositor can manipulate the funds, which in our case
-> is the Marketplace contract that the multisig has control over. Maybe we should consider how users could
-> withdraw funds from the Vault directly without interacting through the Marketplace contract. That will have to be
-> thoroughly considered, as allowing such a thing could hinder the security guarantees of the Vault.
+> But with the current Vault design, only the controller can manipulate the funds, which in our case
+> is the Marketplace contract that the multisig has control over. This is why users can withdraw funds from the
+> Vault directly without interacting through the Marketplace contract.
 
 #### Vault emergency
 
