@@ -195,7 +195,7 @@ Request without losing their collateral.
 Dispersal
 ---------
 
-Here we propose an an alternative way to select hosts for slots that is a
+Here we propose an alternative way to select hosts for slots that is a
 variant of the "first come, first serve" approach that we described earlier. It
 intends to alleviate these problems:
 

@@ -120,7 +120,7 @@ and $F(1)=1$ can be plugged in; for example, a parametric exponential:
 
  $$ F_s(x) = \frac{\exp(sx) - 1}{\exp(s) - 1} $$
 
-Remark: with this particular function, is is likely desired to have $s<0$
+Remark: with this particular function, it is likely desired to have $s<0$
 (resulting in fast expansion initially, slowing down later). Here is a
 Mathematica one-liner to play with this idea:
 ```
