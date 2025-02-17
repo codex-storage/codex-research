@@ -155,7 +155,7 @@ Censorship resistance
 ---------------------
 
 Censorship resistance can be achieved by having a decentralized architecture,
-where anyone is allowed to propose blocks and there are are no admin rights that
+where anyone is allowed to propose blocks and there are no admin rights that
 allow a rollup operator to change the rules in their favour.
 
 Only Fuel L2 V1 has all these properties, the others don't. And because Fuel L2
