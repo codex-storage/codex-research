@@ -222,44 +222,45 @@ We envision the following API of the Vault contract:
 contract Vault {
   /// Locks the fund until the expiry timestamp. The lock expiry can be extended
   /// later, but no more than the maximum timestamp.
-  function lock(Fund fund, Timestamp expiry, Timestamp maximum) {}
+  function lock(FundId fundId, Timestamp expiry, Timestamp maximum) {}
 
   /// Deposits an amount of tokens into the vault, and adds them to the balance
-  /// of the recipient. ERC20 tokens are transfered from the caller to the vault
+  /// of the account. ERC20 tokens are transfered from the caller to the vault
   /// contract.
-  function deposit(Fund fund, Recipient recipient, uint128 amount) {}
+  function deposit(FundId fundId, AccountId accountId, uint128 amount) {}
 
-  /// Takes an amount of tokens from the recipient's balance and designates them
-  /// for the recipient. These tokens are no longer available to be transfered
-  /// to other accounts.
-  function designate(Fund fund, Recipient recipient, uint128 amount) {}
+  /// Takes an amount of tokens from the account balance and designates them
+  /// for the account holder. These tokens are no longer available to be
+  /// transfered to other accounts.
+  function designate(FundId fundId, AccountId accountId, uint128 amount) {}
 
-  /// Transfers an amount of tokens from the acount of one recipient to the
-  /// other.
-  function transfer(Fund fund, Recipient from, Recipient to, uint128 amount) {}
+  /// Transfers an amount of tokens from one acount to the other.
+  function transfer(FundId fundId, AccountId from, AccountId to, uint128 amount) {}
 
-  /// Transfers tokens from the account of one recipient to the other over time.
-  function flow(Fund fund, Recipient from, Recipient to, TokensPerSecond rate) {}
+  /// Transfers tokens from one account to the other over time.
+  function flow(FundId fundId, AccountId from, AccountId to, TokensPerSecond rate) {}
 
   /// Delays unlocking of a locked fund.
-  function extendLock(Fund fund, Timestamp expiry) {}
+  function extendLock(FundId fundId, Timestamp expiry) {}
 
-  /// Burns an amount of designated tokens from the account of the recipient.
-  function burnDesignated(Fund fund, Recipient recipient, uint128 amount) {}
+  /// Burns an amount of designated tokens from the account.
+  function burnDesignated(FundId fundId, AccountId accountId, uint128 amount) {}
 
-  /// Burns all tokens from the account of the recipient.
-  function burnAccount(Fund fund, Recipient recipient) {}
+  /// Burns all tokens from the account.
+  function burnAccount(FundId fundId, AccountId accountId) {}
 
-  /// Burns all tokens from all accounts in a fund.
-  function burnFund(Fund fund) {}
+  /// Freezes a fund. Stops all tokens flows and disallows any operations on the
+  /// fund until it unlocks.
+  function freezeFund(FundId fundId) {}
 
-  /// Transfers all ERC20 tokens in the recipient's account out of the vault to
-  /// the recipient address.
-  function withdraw(Fund fund, Recipient recipient) {}
+  /// Transfers all ERC20 tokens in the account out of the vault to the account
+  /// holder.
+  function withdraw(FundId fundId, AccountId accountId) {}
 
-  /// Allows a recipient to withdraw its tokens from a fund directly, bypassing
-  /// the need to ask the controller of the fund to initiate the withdrawal.
-  function withdrawByRecipient(Controller controller, Fund fund) {}
+  /// Allows an account holder to withdraw its tokens from a fund directly,
+  /// bypassing the need to ask the controller of the fund to initiate the 
+  /// withdrawal.
+  function withdrawByRecipient(Controller controller, FundId fundId, AccountId accountId) {}
 }
 ```
 
@@ -268,40 +269,44 @@ Hence, the funds for each controller are independent, and each controller can on
 
 Integration into the Marketplace contract would be in the following way:
 
-- `RequestId`s are used as `Fund` identifiers in the vault.
+- `RequestId`s are used as `FundId` identifiers in the vault.
 - When storage is requested by a client, it leads to the following calls on the
   vault:
    - `lock(requestId, request.expiry, request.end)`
-   - `deposit(requestId, request.client, request.price)`
+   - `deposit(requestId, clientAccount, request.price)`
 - When a slot is filled by a provider, the associated collateral is deposited
   and designated, and some of the client tokens flow to the provider:
-   - `deposit(requestId, provider, collateral)`
-   - `designate(requestId, provider, collateral - repairReward)`
-   - `flow(requestId, client, provider, pricePerSlotPerSecond)`
+   - `deposit(requestId, providerAccount, collateral)`
+   - `designate(requestId, providerAccount, collateral - repairReward)`
+   - `flow(requestId, clientAccount, providerAccount, pricePerSlotPerSecond)`
 - When a request starts, the time lock is extended:
    - `extendLock(requestId, request.end)`
 - When a request ends, then the vault will allow hosts and client to withdraw
   their tokens. This consists of collateral and partial payouts for hosts and
   any remaining funds for the client:
-  - either: `withdraw(requestId, recipient)`
-  - or: `withdrawByRecipient(marketplace, requestId)`
+  - either: `withdraw(requestId, account)`
+  - or: `withdrawByRecipient(marketplace, requestId, account)`
 - When a provider misses a storage proof, then a part of its collateral is
   burned:
-  - `burnDesignated(requestId, provider, slashAmount)`
+  - `burnDesignated(requestId, providerAccount, slashAmount)`
 - When a slot is freed because a provider missed too many proofs, then the
   repair reward is set aside, the flow of tokens to the provider is reversed,
   and the rest of the provider tokens are burned:
-  - `transfer(requestId, provider, client, repairReward)`
-  - `flow(requestId, provider, client, pricePerSlotPerSecond)`
-  - `burnAccount(requestId, provider)`
+  - `transfer(requestId, providerAccount, clientAccount, repairReward)`
+  - `flow(requestId, providerAccount, clientAccount, pricePerSlotPerSecond)`
+  - `burnAccount(requestId, providerAccount)`
 - When a slot is repaired then the repair reward is transfered to the new
   provider:
-  - `transfer(requestId, client, provider, repairReward)`
-- When a request fails, the entire fund is burned, including the client tokens:
-  - `burnFund(requestId)`
+  - `transfer(requestId, clientAccount, providerAccount, repairReward)`
+- When a request fails, the fund is frozen:
+  - `freezeFund(requestId)`
 
 The main downsides of this approach are:
-- when the request fails, then the client also loses its tokens
+- it is no longer possible to burn the funds of all providers when a storage
+  request fails; only the funds of providers that failed to provide storage
+  proofs are burned
+- it is no longer possible to return all funds to the client when a storage
+  request fails; a client is only refunded for the remaining time
 - when a request ends, then everyone can withdraw directly from the vault,
   so it's not possible for the marketplace to e.g. request one final storage
   proof before allowing withdrawal
